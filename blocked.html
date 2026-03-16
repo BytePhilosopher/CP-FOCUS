@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blocked — CF Focus</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0f14;
+      --surface: #161a22;
+      --border: #2a2f3d;
+      --accent: #e53e3e;
+      --text: #e8eaf0;
+      --muted: #6b7280;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Space Grotesk', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+
+    /* Grid lines background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(229,62,62,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(229,62,62,0.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+    }
+
+    .container {
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(229,62,62,0.1);
+      border: 1px solid rgba(229,62,62,0.3);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: #fc8181;
+      letter-spacing: 0.5px;
+      margin-bottom: 28px;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #e53e3e;
+      animation: blink 1.2s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .lock-icon {
+      font-size: 56px;
+      line-height: 1;
+      margin-bottom: 24px;
+      filter: grayscale(0.2);
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 600;
+      letter-spacing: -1px;
+      margin-bottom: 12px;
+      color: var(--text);
+    }
+
+    h1 span {
+      color: #fc8181;
+    }
+
+    .sub {
+      font-size: 15px;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 36px;
+    }
+
+    .quote-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 32px;
+      text-align: left;
+    }
+
+    .quote-box p {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .quote-box strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .quotes-cycle {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: #a0aec0;
+      font-style: italic;
+    }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-family: var(--sans);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .back-btn:hover {
+      border-color: #4a5568;
+      color: white;
+    }
+
+    .cf-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-family: var(--sans);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      margin-left: 10px;
+      transition: opacity 0.2s;
+    }
+
+    .cf-link:hover { opacity: 0.85; }
+
+    .footer-note {
+      margin-top: 28px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: #4a5568;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="badge">
+      <div class="badge-dot"></div>
+      CF FOCUS — ACTIVE
+    </div>
+
+    <div class="lock-icon">🔒</div>
+
+    <h1>AI is <span>blocked</span></h1>
+    <p class="sub" id="subText">AI assistance is disabled while you're in focus mode.<br>Trust your brain — you're stronger than you think.</p>
+
+    <div class="quote-box">
+      <p class="quotes-cycle" id="quote"></p>
+    </div>
+
+    <div>
+      <a class="back-btn" onclick="history.back()">← Go back</a>
+      <a class="cf-link" href="https://codeforces.com" target="_blank">Back to CF →</a>
+    </div>
+
+    <p class="footer-note">close all codeforces.com tabs to re-enable AI sites</p>
+  </div>
+
+  <script>
+    // Show which site was blocked
+    const params = new URLSearchParams(window.location.search);
+    const fromSite = params.get('from');
+    if (fromSite) {
+      document.getElementById('subText').innerHTML =
+        `<strong style="color:#fc8181">${fromSite}</strong> is blocked while you're in focus mode.<br>Trust your brain — you're stronger than you think.`;
+    }
+
+    const quotes = [
+      '"The expert in anything was once a beginner who refused to give up."',
+      '"Every problem you solve without AI is a skill you actually own."',
+      '"Struggling with a problem is the feeling of your brain getting stronger."',
+      '"The only way to get better at DSA is to do DSA."',
+      '"Competitive programmers don\'t Google their way through a contest."',
+      '"Hard problems require hard thinking, not easy answers."',
+      '"You opened Codeforces to practice. So practice."',
+      '"The discomfort of not knowing is exactly where growth lives."',
+    ];
+    document.getElementById("quote").textContent = quotes[Math.floor(Math.random() * quotes.length)];
+  </script>
+</body>
+</html>

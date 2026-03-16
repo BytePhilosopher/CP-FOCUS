@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CF Focus — Settings</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0f14;
+      --surface: #161a22;
+      --surface2: #1e2330;
+      --border: #2a2f3d;
+      --accent: #e53e3e;
+      --accent-dim: rgba(229,62,62,0.12);
+      --green: #48bb78;
+      --green-dim: rgba(72,187,120,0.1);
+      --amber: #ed8936;
+      --blue: #63b3ed;
+      --text: #e8eaf0;
+      --muted: #6b7280;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Space Grotesk', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 13px;
+      min-height: 100vh;
+      padding-bottom: 60px;
+    }
+
+    /* ── PIN Modal ── */
+    #pinModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(13,15,20,0.95);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    #pinModal.hidden { display: none; }
+    .pin-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 32px;
+      text-align: center;
+      width: 300px;
+    }
+    .pin-box h2 { font-size: 18px; margin-bottom: 8px; }
+    .pin-box p  { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+    .pin-input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 18px;
+      letter-spacing: 4px;
+      padding: 10px;
+      text-align: center;
+      outline: none;
+      margin-bottom: 14px;
+    }
+    .pin-input:focus { border-color: var(--accent); }
+    .pin-error { color: #fc8181; font-size: 11px; min-height: 16px; margin-bottom: 12px; }
+    .btn-primary {
+      width: 100%;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 10px;
+      transition: opacity 0.2s;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+
+    /* ── Page layout ── */
+    .page-header {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 28px 24px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .page-logo {
+      width: 38px; height: 38px;
+      background: var(--accent);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-weight: 700; font-size: 15px; color: white;
+    }
+    .page-header h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.5px; }
+    .page-header p  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    .content { max-width: 640px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── Section ── */
+    .section {
+      margin-top: 28px;
+    }
+    .section-title {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    /* ── Toggle grid ── */
+    .toggle-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--border);
+    }
+    .toggle-item {
+      background: var(--surface);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .toggle-item:hover { background: var(--surface2); }
+    .toggle-item-name { font-size: 13px; font-weight: 500; }
+    .toggle-item-sub  { font-size: 10px; color: var(--muted); margin-top: 1px; font-family: var(--mono); }
+
+    /* CSS toggle switch */
+    .toggle-switch { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-track {
+      position: absolute; inset: 0;
+      background: var(--border);
+      border-radius: 20px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .toggle-track::before {
+      content: '';
+      position: absolute;
+      left: 3px; top: 3px;
+      width: 14px; height: 14px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .toggle-switch input:checked + .toggle-track { background: var(--green); }
+    .toggle-switch input:checked + .toggle-track::before { transform: translateX(16px); }
+
+    /* ── Sites list (default blocked) ── */
+    .sites-list { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); }
+    .site-item {
+      background: var(--surface);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+    }
+    .site-item:hover { background: var(--surface2); }
+    .site-name { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+    .site-item input:checked ~ .site-name { color: var(--text); }
+
+    /* ── Custom blocklist ── */
+    .add-row {
+      padding: 12px 14px;
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .text-input {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 7px 10px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .text-input:focus { border-color: var(--blue); }
+    .text-input::placeholder { color: var(--muted); }
+    .btn-add {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text);
+      cursor: pointer;
+      font-family: var(--sans);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 7px 14px;
+      transition: border-color 0.2s, color 0.2s;
+      white-space: nowrap;
+    }
+    .btn-add:hover { border-color: var(--blue); color: var(--blue); }
+
+    .custom-list { padding: 6px 14px 10px; min-height: 36px; }
+    .custom-empty { font-family: var(--mono); font-size: 11px; color: var(--muted); padding: 8px 0; }
+    .custom-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text);
+      margin: 4px 4px 0 0;
+    }
+    .custom-tag button {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 13px;
+      line-height: 1;
+      padding: 0;
+      transition: color 0.15s;
+    }
+    .custom-tag button:hover { color: var(--accent); }
+
+    /* ── Snooze duration ── */
+    .row-setting {
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .row-setting + .row-setting { border-top: 1px solid var(--border); }
+    .row-label { font-size: 13px; font-weight: 500; }
+    .row-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .select-input {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 6px 10px;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .select-input:focus { border-color: var(--blue); }
+
+    /* ── Schedule ── */
+    .schedule-body { padding: 14px; }
+    .day-grid {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .day-chip {
+      width: 36px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .day-chip.selected { background: var(--accent-dim); border-color: rgba(229,62,62,0.4); color: #fc8181; }
+    .hour-row { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
+    .hour-input {
+      width: 64px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      padding: 6px 8px;
+      outline: none;
+      text-align: center;
+      transition: border-color 0.2s;
+    }
+    .hour-input:focus { border-color: var(--blue); }
+
+    /* ── PIN ── */
+    .pin-section { padding: 14px; }
+    .pin-status  { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-bottom: 12px; }
+    .pin-status.set { color: var(--green); }
+    .pin-form { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+    .pin-field { display: flex; flex-direction: column; gap: 4px; }
+    .pin-field label { font-size: 11px; color: var(--muted); }
+    .pin-input-sm {
+      width: 110px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 14px;
+      letter-spacing: 3px;
+      padding: 7px 10px;
+      outline: none;
+      text-align: center;
+      transition: border-color 0.2s;
+    }
+    .pin-input-sm:focus { border-color: var(--blue); }
+    .btn-sm {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text);
+      cursor: pointer;
+      font-family: var(--sans);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 8px 14px;
+      transition: all 0.2s;
+    }
+    .btn-sm:hover { border-color: var(--blue); color: var(--blue); }
+    .btn-sm.danger:hover { border-color: var(--accent); color: #fc8181; }
+    .pin-msg { font-size: 11px; min-height: 16px; margin-top: 8px; }
+    .pin-msg.ok  { color: var(--green); }
+    .pin-msg.err { color: #fc8181; }
+
+    /* ── Stats ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+    }
+    .stat-box { background: var(--surface); padding: 14px 10px; text-align: center; }
+    .stat-big  { font-family: var(--mono); font-size: 20px; font-weight: 600; color: var(--text); }
+    .stat-big.orange { color: var(--amber); }
+    .stat-lbl  { font-size: 10px; color: var(--muted); margin-top: 4px; }
+    .stats-footer {
+      padding: 10px 14px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+    }
+    .btn-ghost {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--muted);
+      cursor: pointer;
+      font-family: var(--sans);
+      font-size: 11px;
+      padding: 5px 12px;
+      transition: all 0.2s;
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: #fc8181; }
+
+    /* ── Save indicator ── */
+    #saveIndicator {
+      position: fixed;
+      bottom: 20px;
+      right: 24px;
+      background: var(--surface);
+      border: 1px solid var(--green);
+      border-radius: 8px;
+      color: var(--green);
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 7px 14px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    #saveIndicator.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+  <!-- PIN lock modal -->
+  <div id="pinModal" class="hidden">
+    <div class="pin-box">
+      <h2>🔒 PIN Required</h2>
+      <p>Enter your PIN to access settings</p>
+      <input type="password" class="pin-input" id="pinModalInput" maxlength="8" placeholder="••••" inputmode="numeric">
+      <div class="pin-error" id="pinModalError"></div>
+      <button class="btn-primary" id="pinModalSubmit">Unlock</button>
+    </div>
+  </div>
+
+  <div id="mainContent">
+    <div class="page-header">
+      <div class="page-logo">CF</div>
+      <div>
+        <h1>CF Focus Settings</h1>
+        <p>v2.0 — AI Blocker for Competitive Programming</p>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ── PLATFORMS ── -->
+      <div class="section">
+        <div class="section-title">Focus Platforms</div>
+        <div class="card">
+          <div class="toggle-grid" id="platformGrid"></div>
+        </div>
+      </div>
+
+      <!-- ── BLOCKED SITES ── -->
+      <div class="section">
+        <div class="section-title">Blocked AI Sites</div>
+        <div class="card">
+          <div class="sites-list" id="defaultSites"></div>
+          <div style="border-top:1px solid var(--border); padding: 10px 14px;">
+            <div style="font-size:11px; color:var(--muted); margin-bottom:8px; font-family:var(--mono);">CUSTOM SITES</div>
+            <div class="add-row" style="padding:0 0 10px 0; border-bottom: 1px solid var(--border);">
+              <input class="text-input" id="customInput" type="text" placeholder="e.g. khanacademy.org">
+              <button class="btn-add" id="customAddBtn">Add</button>
+            </div>
+            <div class="custom-list" id="customList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SNOOZE ── -->
+      <div class="section">
+        <div class="section-title">Snooze</div>
+        <div class="card">
+          <div class="row-setting">
+            <div>
+              <div class="row-label">Default snooze duration</div>
+              <div class="row-sub">How long to pause blocking when you snooze</div>
+            </div>
+            <select class="select-input" id="snoozeDuration">
+              <option value="5">5 min</option>
+              <option value="15" selected>15 min</option>
+              <option value="30">30 min</option>
+              <option value="60">1 hour</option>
+              <option value="120">2 hours</option>
+            </select>
+          </div>
+          <div class="row-setting" style="border-top:1px solid var(--border); padding-top:10px; padding-bottom:10px;">
+            <div style="font-size:11px; color:var(--muted); font-family:var(--mono);">Keyboard shortcut: <strong style="color:var(--text)">Ctrl+Shift+B</strong> (Mac: ⌘⇧B) — toggle snooze</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SCHEDULE ── -->
+      <div class="section">
+        <div class="section-title">Scheduled Blocking</div>
+        <div class="card">
+          <div class="row-setting">
+            <div>
+              <div class="row-label">Enable schedule</div>
+              <div class="row-sub">Block AI during set hours regardless of tabs</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="scheduleEnabled">
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+          <div class="schedule-body" id="scheduleBody" style="border-top:1px solid var(--border);">
+            <div style="font-size:11px; color:var(--muted); margin-bottom:8px;">Active days</div>
+            <div class="day-grid" id="dayGrid"></div>
+            <div class="hour-row">
+              <span>From</span>
+              <input class="hour-input" id="startHour" type="number" min="0" max="23" value="9">
+              <span>:00 to</span>
+              <input class="hour-input" id="endHour" type="number" min="0" max="23" value="21">
+              <span>:00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PIN ── -->
+      <div class="section">
+        <div class="section-title">PIN Lock</div>
+        <div class="card">
+          <div class="pin-section">
+            <div class="pin-status" id="pinStatus">No PIN set — settings are unlocked</div>
+            <div class="pin-form" id="pinForm">
+              <div class="pin-field">
+                <label>New PIN (4–8 digits)</label>
+                <input type="password" class="pin-input-sm" id="newPin" maxlength="8" placeholder="••••" inputmode="numeric">
+              </div>
+              <div class="pin-field">
+                <label>Confirm</label>
+                <input type="password" class="pin-input-sm" id="confirmPin" maxlength="8" placeholder="••••" inputmode="numeric">
+              </div>
+              <button class="btn-sm" id="setPinBtn">Set PIN</button>
+              <button class="btn-sm danger" id="removePinBtn" style="display:none">Remove PIN</button>
+            </div>
+            <div class="pin-msg" id="pinMsg"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── STATS ── -->
+      <div class="section">
+        <div class="section-title">Focus Stats</div>
+        <div class="card">
+          <div class="stats-grid">
+            <div class="stat-box">
+              <div class="stat-big orange" id="statStreak">0</div>
+              <div class="stat-lbl">day streak</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-big" id="statLongest">0</div>
+              <div class="stat-lbl">best streak</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-big" id="statSessions">0</div>
+              <div class="stat-lbl">sessions</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-big" id="statMinutes">0</div>
+              <div class="stat-lbl">min focus</div>
+            </div>
+          </div>
+          <div class="stats-footer">
+            <button class="btn-ghost" id="resetStatsBtn">Reset stats</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /mainContent -->
+
+  <div id="saveIndicator">✓ Saved</div>
+
+  <script src="options.js"></script>
+</body>
+</html>
