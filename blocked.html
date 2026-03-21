@@ -5,20 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Focus Mode — CF Focus</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:      #0d1117;
-      --surface: #161b27;
-      --border:  #21293d;
-      --brand:   #6366f1;
-      --text:    #e6edf3;
-      --text2:   #7d8590;
-      --muted:   #3d4a5c;
-      --mono:    'JetBrains Mono', monospace;
-      --sans:    'Inter', sans-serif;
+      --bg:    #080808;
+      --s1:    #0e0e0e;
+      --s2:    #141414;
+      --b1:    #1a1a1a;
+      --b2:    #252525;
+      --red:   #c8191c;
+      --red-d: rgba(200,25,28,0.08);
+      --red-m: rgba(200,25,28,0.22);
+      --white: #ffffff;
+      --text:  #f0f0f0;
+      --text2: #777777;
+      --muted: #333333;
+      --dim: rgba(255,255,255,0.08);
+      --mono:  'JetBrains Mono', monospace;
+      --sans:  'Inter', sans-serif;
     }
 
     body {
@@ -33,140 +39,188 @@
       padding: 48px 24px;
     }
 
-    /* Very subtle top glow - brand color, not alarming red */
+    /* Subtle radial glow at top */
     body::before {
       content: '';
       position: fixed;
-      top: 0;
-      left: 50%;
+      top: 0; left: 50%;
       transform: translateX(-50%);
-      width: 600px;
-      height: 300px;
-      background: radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.07) 0%, transparent 70%);
+      width: 700px; height: 280px;
+      background: radial-gradient(ellipse at 50% 0%, rgba(200,25,28,0.05) 0%, transparent 70%);
       pointer-events: none;
     }
 
     .container {
-      max-width: 440px;
+      max-width: 460px;
       width: 100%;
       position: relative;
       z-index: 1;
     }
 
-    /* ── Top nav ── */
+    /* ── Top bar ── */
     .topbar {
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 48px;
+      margin-bottom: 44px;
     }
 
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
+    .brand { display: flex; align-items: center; gap: 10px; }
 
     .brand-logo {
-      width: 28px;
-      height: 28px;
-      background: var(--brand);
+      width: 28px; height: 28px;
+      background: #ffffff;
       border-radius: 7px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       font-family: var(--mono);
       font-weight: 700;
       font-size: 11px;
-      color: white;
+      color: #000000;
       letter-spacing: -0.5px;
+      flex-shrink: 0;
     }
 
     .brand-name {
       font-size: 14px;
-      font-weight: 600;
-      color: var(--text);
+      font-weight: 700;
       letter-spacing: -0.3px;
+      color: var(--text);
     }
 
-    /* ── Status badge ── */
-    .mode-badge {
+    /* ── Session card ── */
+    #sessionCard {
+      display: none;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 18px 22px;
+      margin-bottom: 32px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .session-card-left {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .session-pill {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      background: rgba(99, 102, 241, 0.1);
-      border: 1px solid rgba(99, 102, 241, 0.2);
-      border-radius: 100px;
-      padding: 5px 12px;
+      gap: 5px;
       font-family: var(--mono);
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 600;
-      color: #a5b4fc;
       letter-spacing: 0.8px;
       text-transform: uppercase;
-      margin-bottom: 36px;
+      color: var(--text);
     }
 
-    .mode-dot {
-      width: 5px;
-      height: 5px;
+    .session-dot {
+      width: 5px; height: 5px;
       border-radius: 50%;
-      background: var(--brand);
-      animation: breathe 2.5s ease-in-out infinite;
+      background: #ffffff;
+      animation: breathe 2s ease-in-out infinite;
     }
 
     @keyframes breathe {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50%       { opacity: 0.5; transform: scale(0.8); }
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.35; }
     }
 
-    /* ── Icon ── */
-    .icon-wrap {
-      width: 64px;
-      height: 64px;
-      background: rgba(99, 102, 241, 0.08);
-      border: 1px solid rgba(99, 102, 241, 0.15);
-      border-radius: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 28px;
-      color: #a5b4fc;
+    .session-card-sub {
+      font-size: 11px;
+      color: var(--text2);
+      font-family: var(--mono);
     }
 
-    /* ── Heading ── */
-    h1 {
-      font-size: 36px;
+    .session-timer-big {
+      font-family: var(--mono);
+      font-size: 40px;
       font-weight: 700;
-      letter-spacing: -1.5px;
+      color: #ffffff;
+      letter-spacing: -2px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .hc-badge {
+      display: none;
+      align-items: center;
+      gap: 5px;
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--red);
+      background: var(--red-d);
+      border: 1px solid var(--red-m);
+      padding: 3px 9px;
+      border-radius: 100px;
+      width: fit-content;
+    }
+
+    /* ── Stop icon ── */
+    .stop-icon {
+      width: 64px; height: 64px;
+      background: var(--red-d);
+      border: 1px solid var(--red-m);
+      border-radius: 18px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 24px;
+      color: var(--red);
+    }
+
+    /* ── Headline ── */
+    h1 {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -1.3px;
       line-height: 1.05;
       color: var(--text);
-      margin-bottom: 12px;
+      margin-bottom: 10px;
       text-align: center;
     }
 
-    .headline-accent {
-      color: var(--brand);
-    }
+    .headline-accent { color: var(--red); }
 
+    /* ── Subtitle ── */
     .subtitle {
       font-size: 15px;
       color: var(--text2);
-      line-height: 1.6;
+      line-height: 1.65;
       text-align: center;
-      margin-bottom: 40px;
+      margin-bottom: 10px;
     }
 
-    .site-name {
+    /* ── Site badge ── */
+    #siteBadgeWrap {
+      display: none;
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    #siteBadge {
+      display: inline-block;
+      background: var(--red-d);
+      border: 1px solid var(--red-m);
+      border-radius: 100px;
+      padding: 4px 12px;
+      font-family: var(--mono);
+      font-size: 12px;
       font-weight: 600;
-      color: var(--text);
+      color: var(--red);
+      letter-spacing: 0.3px;
     }
 
-    /* ── Quote ── */
+    /* ── Quote card ── */
     .quote-wrap {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
+      background: var(--s1);
+      border: 1px solid var(--b1);
+      border-radius: 14px;
       padding: 20px 22px;
       margin-bottom: 28px;
       text-align: left;
@@ -185,63 +239,83 @@
     .quote-text {
       font-size: 13px;
       color: var(--text2);
-      line-height: 1.75;
+      line-height: 1.8;
       font-style: italic;
     }
 
     /* ── Actions ── */
     .actions {
       display: flex;
-      gap: 8px;
-      margin-bottom: 32px;
+      flex-direction: column;
+      gap: 9px;
+      margin-bottom: 28px;
     }
 
     .btn {
-      flex: 1;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
+      gap: 7px;
       font-family: var(--sans);
       font-size: 13px;
-      font-weight: 500;
-      padding: 11px 16px;
-      border-radius: 9px;
+      font-weight: 600;
+      padding: 13px 22px;
+      border-radius: 10px;
       cursor: pointer;
       text-decoration: none;
+      border: none;
       transition: all 0.15s ease;
-      letter-spacing: -0.1px;
     }
     .btn:active { transform: scale(0.97); }
 
-    .btn-ghost {
-      background: transparent;
-      color: var(--text2);
-      border: 1px solid var(--border);
+    .btn-primary {
+      background: #ffffff;
+      color: #000000;
     }
-    .btn-ghost:hover {
-      background: var(--surface);
-      border-color: #2d3a52;
+    .btn-primary:hover { background: #e8e8e8; }
+
+    .btn-solved {
+      background: rgba(255,255,255,0.05);
       color: var(--text);
+      border: 1px solid rgba(255,255,255,0.15);
+      font-weight: 500;
+    }
+    .btn-solved:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.3);
     }
 
-    .btn-brand {
-      background: var(--brand);
-      color: white;
-      border: 1px solid transparent;
-      font-weight: 600;
-    }
-    .btn-brand:hover {
-      background: #4f52e0;
+    /* ── Success state ── */
+    .success-msg {
+      display: none;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 18px 22px;
+      text-align: center;
+      margin-bottom: 28px;
     }
 
-    /* ── Footer ── */
+    .success-msg-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 5px;
+      letter-spacing: -0.3px;
+    }
+
+    .success-msg-sub {
+      font-size: 12px;
+      color: var(--text2);
+      font-family: var(--mono);
+    }
+
+    /* ── Footer note ── */
     .footer-note {
       text-align: center;
       font-family: var(--mono);
       font-size: 10px;
       color: var(--muted);
-      line-height: 1.6;
     }
   </style>
 </head>
@@ -255,50 +329,62 @@
       </div>
     </div>
 
-    <div style="text-align:center">
-      <div class="mode-badge">
-        <div class="mode-dot"></div>
-        Focus Mode Active
+    <!-- Session timer card — shown when a focus session is active -->
+    <div id="sessionCard">
+      <div class="session-card-left">
+        <div class="session-pill">
+          <div class="session-dot"></div>
+          Focus Session
+        </div>
+        <div class="session-card-sub">remaining in session</div>
+        <div class="hc-badge" id="hcBadge">
+          Hardcore &mdash; stay strong
+        </div>
       </div>
+      <div class="session-timer-big" id="sessionTimerBig">--:--</div>
     </div>
 
-    <div class="icon-wrap">
-      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.5"/>
-        <circle cx="12" cy="12" r="5.5" stroke="currentColor" stroke-width="1.5"/>
-        <circle cx="12" cy="12" r="2" fill="currentColor"/>
-        <line x1="12" y1="2.5" x2="12" y2="4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        <line x1="12" y1="19.5" x2="12" y2="21.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        <line x1="2.5" y1="12" x2="4.5" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        <line x1="19.5" y1="12" x2="21.5" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    <!-- Stop icon -->
+    <div class="stop-icon">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.6"/>
+        <rect x="8.5" y="8.5" width="7" height="7" rx="1" fill="currentColor" opacity="0.85"/>
       </svg>
     </div>
 
-    <h1>Stay <span class="headline-accent">focused.</span></h1>
+    <h1>Solve it <span class="headline-accent">yourself.</span></h1>
 
     <p class="subtitle" id="subText">
-      You're in focus mode.<br>
-      Trust your skills — you're stronger than you think.
+      You're about to use AI.<br>Try harder first &mdash; that struggle is where growth lives.
     </p>
 
+    <div id="siteBadgeWrap">
+      <span id="siteBadge"></span>
+    </div>
+
     <div class="quote-wrap">
-      <div class="quote-eyebrow">Quote of the session</div>
+      <div class="quote-eyebrow">Reminder</div>
       <p class="quote-text" id="quote"></p>
     </div>
 
-    <div class="actions">
-      <a class="btn btn-ghost" onclick="history.back(); return false;" href="#">
+    <div class="actions" id="actions">
+      <button class="btn btn-primary" id="goBackBtn">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-          <path d="M10 12.5L5.5 8 10 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M10 12.5L5.5 8 10 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        Go back
-      </a>
-      <a class="btn btn-brand" href="https://codeforces.com" target="_blank">
-        Open Codeforces
+        Go back to problem
+      </button>
+      <button class="btn btn-solved" id="solvedBtn">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-          <path d="M6 3.5L10.5 8 6 12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2.5 8.5l3.5 3.5 7-8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-      </a>
+        I solved it &mdash; unlock AI for 10 min
+      </button>
+    </div>
+
+    <div class="success-msg" id="successMsg">
+      <div class="success-msg-title" id="successTitle">Problem marked as solved!</div>
+      <div class="success-msg-sub" id="successSub">Redirecting&hellip;</div>
     </div>
 
     <p class="footer-note" id="footerNote">
@@ -307,25 +393,6 @@
 
   </div>
 
-  <script>
-    const params = new URLSearchParams(window.location.search);
-    const fromSite = params.get('from');
-    if (fromSite) {
-      document.getElementById('subText').innerHTML =
-        `<span class="site-name">${fromSite}</span> is paused during focus mode.<br>Trust your skills — you're stronger than you think.`;
-    }
-
-    const quotes = [
-      '"The expert in anything was once a beginner who refused to give up."',
-      '"Every problem you solve without AI is a skill you actually own."',
-      '"Struggling with a problem is the feeling of your brain getting stronger."',
-      '"The only way to get better at DSA is to do DSA."',
-      '"Competitive programmers don\'t Google their way through a contest."',
-      '"Hard problems require hard thinking, not easy answers."',
-      '"You opened Codeforces to practice. So practice."',
-      '"The discomfort of not knowing is exactly where growth lives."',
-    ];
-    document.getElementById('quote').textContent = quotes[Math.floor(Math.random() * quotes.length)];
-  </script>
+  <script src="blocked.js"></script>
 </body>
 </html>

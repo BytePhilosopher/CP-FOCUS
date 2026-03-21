@@ -3,31 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CF Focus — Settings</title>
+  <title>CF Focus &mdash; Settings</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:         #0d1117;
-      --surface:    #161b27;
-      --surface2:   #1c2333;
-      --border:     #21293d;
-      --border2:    #2a3652;
-      --brand:      #6366f1;
-      --brand-dim:  rgba(99, 102, 241, 0.1);
-      --red:        #f43f5e;
-      --red-dim:    rgba(244, 63, 94, 0.1);
-      --green:      #10b981;
-      --green-dim:  rgba(16, 185, 129, 0.1);
-      --amber:      #f59e0b;
-      --blue:       #60a5fa;
-      --text:       #e6edf3;
-      --text2:      #7d8590;
-      --muted:      #3d4a5c;
-      --mono:       'JetBrains Mono', monospace;
-      --sans:       'Inter', sans-serif;
+      --bg:    #080808;
+      --s1:    #0e0e0e;
+      --s2:    #141414;
+      --b1:    #1a1a1a;
+      --b2:    #252525;
+      --red:   #c8191c;
+      --red-d: rgba(200,25,28,0.08);
+      --red-m: rgba(200,25,28,0.22);
+      --text:  #f0f0f0;
+      --text2: #777777;
+      --muted: #555555;
+      --dim: rgba(255,255,255,0.08);
+      --mono:  'JetBrains Mono', monospace;
+      --sans:  'Inter', sans-serif;
+      --sidebar-w: 220px;
     }
 
     body {
@@ -36,699 +33,767 @@
       font-family: var(--sans);
       font-size: 13px;
       min-height: 100vh;
-      padding-bottom: 80px;
     }
 
-    /* ── PIN Modal ── */
+    /* ── PIN Modal ────────────────────────────────────────────────── */
     #pinModal {
-      position: fixed;
-      inset: 0;
-      background: rgba(13, 17, 23, 0.88);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
+      position: fixed; inset: 0;
+      background: rgba(8,8,8,0.93);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200;
     }
     #pinModal.hidden { display: none; }
-
     .pin-box {
-      background: var(--surface);
-      border: 1px solid var(--border2);
-      border-radius: 16px;
-      padding: 36px 32px;
-      text-align: center;
-      width: 320px;
-      box-shadow: 0 24px 48px rgba(0,0,0,0.5);
+      background: var(--s1); border: 1px solid var(--b2);
+      border-radius: 20px; padding: 44px 40px;
+      text-align: center; width: 340px;
+      box-shadow: 0 40px 80px rgba(0,0,0,0.8);
     }
-
     .pin-box-icon {
-      width: 48px;
-      height: 48px;
-      background: var(--brand-dim);
-      border: 1px solid rgba(99, 102, 241, 0.2);
-      border-radius: 14px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 18px;
-      color: #a5b4fc;
+      width: 56px; height: 56px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      display: inline-flex; align-items: center; justify-content: center;
+      margin-bottom: 22px; color: var(--text);
     }
-
-    .pin-box h2 {
-      font-size: 18px;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-      margin-bottom: 6px;
-    }
-    .pin-box-desc {
-      font-size: 13px;
-      color: var(--text2);
-      margin-bottom: 28px;
-      line-height: 1.5;
-    }
-
+    .pin-box h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.6px; margin-bottom: 8px; }
+    .pin-box-desc { font-size: 13px; color: var(--text2); margin-bottom: 28px; line-height: 1.5; }
     .pin-input {
-      width: 100%;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 9px;
-      color: var(--text);
-      font-family: var(--mono);
-      font-size: 22px;
-      letter-spacing: 8px;
-      padding: 13px;
-      text-align: center;
-      outline: none;
-      margin-bottom: 12px;
-      transition: border-color 0.15s;
+      width: 100%; background: var(--bg); border: 1px solid var(--b1);
+      border-radius: 10px; color: var(--text); font-family: var(--mono);
+      font-size: 24px; letter-spacing: 10px; padding: 14px; text-align: center;
+      outline: none; margin-bottom: 12px; transition: border-color 0.15s;
     }
-    .pin-input:focus { border-color: var(--brand); }
-    .pin-input::placeholder { letter-spacing: 4px; font-size: 16px; }
-
-    .pin-error {
-      color: #fb7185;
-      font-size: 11px;
-      min-height: 18px;
-      margin-bottom: 14px;
-      font-family: var(--mono);
-    }
-
+    .pin-input:focus { border-color: #fff; }
+    .pin-input::placeholder { letter-spacing: 4px; font-size: 18px; }
+    .pin-error { color: var(--red); font-size: 11px; min-height: 18px; margin-bottom: 14px; font-family: var(--mono); }
     .btn-primary {
-      width: 100%;
-      background: var(--brand);
-      border: none;
-      border-radius: 9px;
-      color: white;
-      cursor: pointer;
-      font-family: var(--sans);
-      font-size: 13px;
-      font-weight: 600;
-      padding: 12px;
+      width: 100%; background: #fff; border: none; border-radius: 10px;
+      color: #000; cursor: pointer; font-family: var(--sans);
+      font-size: 13px; font-weight: 700; padding: 13px;
       transition: background 0.15s, transform 0.1s;
-      letter-spacing: -0.1px;
     }
-    .btn-primary:hover { background: #4f52e0; }
+    .btn-primary:hover { background: #e8e8e8; }
     .btn-primary:active { transform: scale(0.98); }
 
-    /* ── Page layout ── */
-    .page-header {
-      max-width: 660px;
-      margin: 0 auto;
-      padding: 28px 28px 24px;
-      border-bottom: 1px solid var(--border);
+    /* ── Sidebar ──────────────────────────────────────────────────── */
+    .sidebar {
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      width: var(--sidebar-w);
+      background: var(--s1);
+      border-right: 1px solid var(--b1);
       display: flex;
-      align-items: center;
-      gap: 14px;
+      flex-direction: column;
+      z-index: 100;
+      overflow-y: auto;
     }
-
-    .page-logo {
-      width: 42px;
-      height: 42px;
-      background: var(--brand);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: var(--mono);
-      font-weight: 700;
-      font-size: 16px;
-      color: white;
+    .sidebar-logo {
+      display: flex; align-items: center; gap: 12px;
+      padding: 22px 16px 20px;
+      border-bottom: 1px solid var(--b1);
       flex-shrink: 0;
-      letter-spacing: -0.5px;
-      box-shadow: 0 0 0 1px rgba(99,102,241,0.4), 0 4px 12px rgba(99,102,241,0.2);
     }
-
-    .page-header-text { flex: 1; }
-    .page-header-text h1 {
-      font-size: 19px;
-      font-weight: 700;
-      letter-spacing: -0.6px;
+    .sidebar-logo-badge {
+      width: 36px; height: 36px; background: #fff; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-weight: 700; font-size: 14px; color: #000;
+      flex-shrink: 0; letter-spacing: -0.4px;
     }
-    .page-header-text p {
-      font-size: 12px;
-      color: var(--text2);
-      margin-top: 3px;
+    .sidebar-logo-name {
+      font-size: 14px; font-weight: 700; letter-spacing: -0.4px; color: var(--text);
     }
-
-    .version-tag {
-      font-family: var(--mono);
-      font-size: 10px;
-      font-weight: 500;
-      color: #a5b4fc;
-      background: var(--brand-dim);
-      border: 1px solid rgba(99, 102, 241, 0.2);
-      border-radius: 100px;
-      padding: 3px 10px;
+    .sidebar-logo-sub {
+      font-family: var(--mono); font-size: 9px; color: var(--text2); margin-top: 3px;
+      letter-spacing: 0.3px;
     }
-
-    .content {
-      max-width: 660px;
-      margin: 0 auto;
-      padding: 0 28px;
-    }
-
-    /* ── Section ── */
-    .section { margin-top: 36px; }
-
-    .section-title {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-
-    .section-title-text {
-      font-family: var(--mono);
-      font-size: 9px;
-      font-weight: 600;
-      letter-spacing: 1.4px;
-      text-transform: uppercase;
-      color: var(--muted);
-      white-space: nowrap;
-    }
-
-    .section-title-line {
+    .sidebar-nav {
+      padding: 12px 10px;
       flex: 1;
-      height: 1px;
-      background: var(--border);
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 10px; border-radius: 9px;
+      font-size: 13px; font-weight: 500; color: var(--text2);
+      cursor: pointer; user-select: none;
+      transition: background 0.12s, color 0.12s;
+    }
+    .nav-item:hover { background: var(--b1); color: var(--text); }
+    .nav-item.active { background: var(--b1); color: var(--text); }
+    .nav-icon {
+      width: 16px; height: 16px; flex-shrink: 0;
+      color: var(--muted); transition: color 0.12s;
+    }
+    .nav-item:hover .nav-icon { color: var(--text2); }
+    .nav-item.active .nav-icon { color: var(--red); }
+    .nav-section-label {
+      font-family: var(--mono); font-size: 9px; font-weight: 600;
+      letter-spacing: 1.4px; text-transform: uppercase;
+      color: var(--muted); padding: 12px 10px 6px;
+    }
+    .sidebar-footer {
+      padding: 16px 18px;
+      border-top: 1px solid var(--b1);
+      flex-shrink: 0;
+    }
+    .sidebar-version {
+      font-family: var(--mono); font-size: 9px; color: var(--muted);
     }
 
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
+    /* ── Main area ────────────────────────────────────────────────── */
+    .main-area {
+      margin-left: var(--sidebar-w);
+      min-height: 100vh;
+    }
+
+    /* ── Views ────────────────────────────────────────────────────── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    .view-header {
+      padding: 30px 40px 24px;
+      border-bottom: 1px solid var(--b1);
+      position: relative; overflow: hidden;
+    }
+    .view-header::before {
+      content: '';
+      position: absolute; top: -60px; left: -40px;
+      width: 260px; height: 260px;
+      background: radial-gradient(circle, rgba(200,25,28,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .view-title {
+      font-size: 20px; font-weight: 700; letter-spacing: -0.6px;
+      position: relative; z-index: 1;
+    }
+    .view-sub {
+      font-size: 12px; color: var(--text2); margin-top: 5px;
+      font-family: var(--mono); position: relative; z-index: 1;
+    }
+
+    /* ── Shared page width wrapper ───────────────────────────────── */
+    .wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 40px;
+    }
+
+    /* ── Stats hero band ─────────────────────────────────────────── */
+    .stats-band {
+      padding: 32px 0 0;
+    }
+    .stats-band-label {
+      font-family: var(--mono); font-size: 9px; font-weight: 600;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 16px;
+    }
+
+    /* 6-column stat row */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 1px;
+      background: var(--b1);
+      border: 1px solid var(--b1);
+      border-radius: 14px 14px 0 0;
       overflow: hidden;
-      transition: border-color 0.15s;
     }
-    .card:focus-within { border-color: var(--border2); }
+    .stat-box {
+      background: var(--s1); padding: 22px 16px 20px;
+      text-align: center; transition: background 0.12s; cursor: default;
+    }
+    .stat-box:hover { background: var(--s2); }
+    .stat-big {
+      font-family: var(--mono); font-size: 30px; font-weight: 700;
+      letter-spacing: -1.5px; line-height: 1; color: var(--text);
+    }
+    .stat-big.amber { color: var(--red); }
+    .stat-big.red   { color: var(--red); }
+    .stat-big.green { color: var(--text); }
+    .stat-lbl {
+      font-size: 9px; color: var(--muted); margin-top: 8px;
+      text-transform: uppercase; letter-spacing: 0.9px; font-family: var(--mono);
+    }
 
-    /* ── Toggle grid ── */
-    .toggle-grid {
+    /* ── Visualization panel (vertical bars + donut) ─────────────── */
+    .viz-panel {
+      background: var(--s1);
+      border: 1px solid var(--b1); border-top: none;
+      border-radius: 0 0 14px 14px;
+      padding: 24px 28px 28px;
+      display: flex; align-items: center; gap: 36px;
+    }
+    .vbar-area { flex: 1; min-width: 0; }
+    .vbar-eyebrow {
+      font-family: var(--mono); font-size: 9px; font-weight: 600;
+      letter-spacing: 1.4px; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 12px;
+    }
+    .vbar-chart {
+      position: relative; height: 140px;
+    }
+    .vbar-grid {
+      position: absolute; left: 0; right: 0; top: 18px; bottom: 24px;
+      display: flex; flex-direction: column;
+      justify-content: space-between; pointer-events: none;
+    }
+    .vbar-grid-line { height: 1px; background: rgba(255,255,255,0.04); }
+    .vbar-cols {
+      position: absolute; inset: 0;
+      display: flex; align-items: flex-end; gap: 14px;
+    }
+    .vbar-col {
+      flex: 1; height: 100%;
+      display: flex; flex-direction: column; align-items: center; gap: 5px;
+    }
+    .vbar-val {
+      font-family: var(--mono); font-size: 12px; font-weight: 700;
+      color: var(--text); flex-shrink: 0; min-height: 18px;
+    }
+    .vbar-track {
+      flex: 1; width: 100%; background: var(--b2);
+      border-radius: 5px 5px 2px 2px;
+      display: flex; align-items: flex-end; overflow: hidden;
+    }
+    .vbar-fill {
+      width: 100%; height: 0%; border-radius: 5px 5px 2px 2px;
+      transition: height 0.9s cubic-bezier(0.34, 1.3, 0.64, 1);
+    }
+    .f-neutral { background: linear-gradient(to top, rgba(255,255,255,0.4), rgba(255,255,255,0.07)); }
+    .f-red     { background: linear-gradient(to top, #c8191c, rgba(200,25,28,0.2)); }
+    .f-white   { background: linear-gradient(to top, rgba(255,255,255,0.65), rgba(255,255,255,0.12)); }
+    .vbar-lbl {
+      font-family: var(--mono); font-size: 9px; color: var(--muted);
+      text-align: center; flex-shrink: 0; letter-spacing: 0.4px; text-transform: uppercase;
+    }
+
+    /* Donut chart */
+    .donut-wrap { flex-shrink: 0; text-align: center; }
+    .donut-svg  { width: 130px; height: 130px; display: block; margin: 0 auto; overflow: visible; }
+    #donutArc   { transition: stroke-dashoffset 1s cubic-bezier(0.34, 1.1, 0.64, 1); }
+    .donut-sub  {
+      font-family: var(--mono); font-size: 9px; color: var(--muted);
+      margin-top: 8px; letter-spacing: 0.3px;
+    }
+
+    /* Stats footer */
+    .stats-footer {
+      border-top: 1px solid var(--b1);
+      padding: 12px 28px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      margin-top: 1px;
+    }
+    .stats-resist-note { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+    .btn-ghost {
+      background: none; border: 1px solid var(--b1); border-radius: 7px;
+      color: var(--muted); cursor: pointer; font-family: var(--sans);
+      font-size: 11px; font-weight: 500; padding: 7px 14px;
+      transition: all 0.15s; flex-shrink: 0;
+    }
+    .btn-ghost:hover { border-color: rgba(200,25,28,0.4); color: var(--red); }
+    .btn-ghost:active { transform: scale(0.97); }
+
+    /* ── Settings layout ─────────────────────────────────────────── */
+    .settings-wrap {
+      padding-top: 32px;
+      padding-bottom: 60px;
+      display: flex; flex-direction: column; gap: 32px;
+    }
+    .settings-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 1px;
-      background: var(--border);
+      gap: 24px;
+      align-items: start;
+    }
+    .settings-full { display: flex; flex-direction: column; }
+
+    /* ── Snooze chips ────────────────────────────────────────────── */
+    .snooze-chip-grid {
+      display: grid; grid-template-columns: repeat(5, 1fr);
+      gap: 8px; padding: 14px 16px;
+    }
+    .snooze-chip {
+      padding: 10px 4px; background: var(--bg);
+      border: 1px solid var(--b1); border-radius: 9px;
+      color: var(--muted); font-family: var(--mono);
+      font-size: 12px; font-weight: 600; cursor: pointer;
+      text-align: center; transition: all 0.12s; user-select: none;
+    }
+    .snooze-chip:hover { border-color: var(--b2); color: var(--text2); background: var(--s2); }
+    .snooze-chip.selected { background: #fff; border-color: #fff; color: #000; }
+
+    /* ── Blocked AI Sites header ─────────────────────────────────── */
+    .sites-hdr {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 13px 16px 11px;
+      border-bottom: 1px solid var(--b1);
+    }
+    .sites-hdr-title {
+      font-family: var(--mono); font-size: 11px; font-weight: 600;
+      color: var(--text2);
+    }
+    .sites-hdr-count {
+      font-family: var(--mono); font-size: 10px; color: var(--muted);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .sites-count-val { color: var(--text2); font-weight: 600; }
+    .sites-bulk-btn {
+      background: none; border: 1px solid var(--b1); border-radius: 6px;
+      color: var(--muted); font-family: var(--mono); font-size: 9px;
+      font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+      padding: 4px 9px; cursor: pointer; transition: all 0.12s;
+    }
+    .sites-bulk-btn:hover { border-color: var(--b2); color: var(--text2); }
+
+    /* ── Section label ───────────────────────────────────────────── */
+    .section-label-row {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+    }
+    .section-label {
+      font-family: var(--mono); font-size: 9px; font-weight: 600;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--muted); white-space: nowrap;
+    }
+    .section-label-line { flex: 1; height: 1px; background: var(--b1); }
+
+    /* ── Card ────────────────────────────────────────────────────── */
+    .card {
+      background: var(--s1); border: 1px solid var(--b1);
+      border-radius: 14px; overflow: hidden;
     }
 
-    .toggle-item {
-      background: var(--surface);
-      padding: 13px 16px;
-      display: flex;
-      align-items: center;
+    /* ── Platform planet grid ────────────────────────────────────── */
+    #platformGrid {
+      display: flex; flex-direction: row;
       justify-content: space-between;
-      cursor: pointer;
-      transition: background 0.12s;
-      gap: 12px;
+      gap: 0; padding: 8px 0 4px;
     }
-    .toggle-item:hover { background: var(--surface2); }
+    .platform-card {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 9px; padding: 12px 10px; border-radius: 12px;
+      cursor: pointer; user-select: none; flex: 1;
+      transition: background 0.15s;
+    }
+    .platform-card:hover { background: rgba(255,255,255,0.03); }
 
-    .toggle-item-info { min-width: 0; flex: 1; }
-    .toggle-item-name {
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text);
+    /* The planet circle */
+    .platform-planet {
+      width: 56px; height: 56px; border-radius: 50%;
+      border: 1.5px solid var(--b2); background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-size: 12px; font-weight: 700;
+      color: var(--muted); letter-spacing: -0.5px;
+      transition: border-color 0.25s, background 0.25s,
+                  color 0.25s, box-shadow 0.25s;
+      position: relative;
     }
-    .toggle-item-sub {
-      font-size: 10px;
-      color: var(--muted);
-      margin-top: 2px;
-      font-family: var(--mono);
+    /* Outer orbit ring — appears when active */
+    .platform-planet::after {
+      content: ''; position: absolute; inset: -7px;
+      border-radius: 50%; border: 1px solid transparent;
+      transition: border-color 0.3s; pointer-events: none;
+    }
+    .platform-card.active .platform-planet {
+      border-color: rgba(200,25,28,0.65);
+      background: rgba(200,25,28,0.08);
+      color: #fff;
+      animation: planet-glow 3s ease-in-out infinite;
+    }
+    .platform-card.active .platform-planet::after {
+      border-color: rgba(200,25,28,0.18);
+    }
+    @keyframes planet-glow {
+      0%, 100% { box-shadow: 0 0 14px rgba(200,25,28,0.22), 0 0 28px rgba(200,25,28,0.07); }
+      50%       { box-shadow: 0 0 22px rgba(200,25,28,0.34), 0 0 44px rgba(200,25,28,0.13); }
     }
 
-    /* Toggle switch */
+    .platform-card-name {
+      font-size: 11px; font-weight: 600; color: var(--muted);
+      text-align: center; transition: color 0.2s; line-height: 1.3;
+    }
+    .platform-card.active .platform-card-name { color: var(--text2); }
+    .platform-card-domain {
+      font-family: var(--mono); font-size: 9px; color: var(--muted);
+      text-align: center; margin-top: -4px; transition: color 0.2s;
+    }
+    /* Status dot */
+    .platform-dot {
+      width: 4px; height: 4px; border-radius: 50%;
+      background: var(--b2); transition: background 0.2s, box-shadow 0.2s;
+    }
+    .platform-card.active .platform-dot {
+      background: var(--red);
+      box-shadow: 0 0 6px rgba(200,25,28,0.6);
+    }
+
+    /* ── Custom platform list ────────────────────────────────────── */
+    .cp-intro {
+      font-size: 12px; color: var(--text2); padding: 14px 16px 0;
+      line-height: 1.5;
+    }
+    .cp-add-row {
+      display: flex; gap: 8px; padding: 12px 14px;
+      border-bottom: 1px solid var(--b1);
+    }
+    .cp-list {
+      padding: 10px 14px 12px;
+      display: flex; flex-direction: column; gap: 6px; min-height: 32px;
+    }
+    .cp-empty {
+      font-family: var(--mono); font-size: 11px; color: var(--muted);
+      padding: 2px 0;
+    }
+    .cp-item {
+      display: flex; align-items: center; gap: 11px;
+      padding: 9px 12px; border-radius: 9px;
+      background: var(--bg); border: 1px solid var(--b1);
+    }
+    .cp-item-badge {
+      width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+      background: var(--s2); border: 1px solid var(--b2);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-size: 9px; font-weight: 700;
+      color: var(--text2); letter-spacing: -0.2px;
+    }
+    .cp-item-info { flex: 1; min-width: 0; }
+    .cp-item-name { font-size: 12px; font-weight: 600; color: var(--text); }
+    .cp-item-domain {
+      font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 2px;
+    }
+    .cp-item-remove {
+      background: none; border: none; color: var(--muted); cursor: pointer;
+      padding: 4px; display: flex; align-items: center; justify-content: center;
+      border-radius: 5px; transition: color 0.12s, background 0.12s; flex-shrink: 0;
+    }
+    .cp-item-remove:hover { color: var(--red); background: var(--red-d); }
+
     .toggle-switch { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
     .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
     .toggle-track {
-      position: absolute;
-      inset: 0;
-      background: var(--border2);
-      border-radius: 20px;
-      cursor: pointer;
-      transition: background 0.2s;
+      position: absolute; inset: 0; background: var(--b2);
+      border-radius: 20px; cursor: pointer; transition: background 0.2s;
     }
     .toggle-track::before {
-      content: '';
-      position: absolute;
-      left: 3px;
-      top: 3px;
-      width: 14px;
-      height: 14px;
-      background: var(--text2);
-      border-radius: 50%;
+      content: ''; position: absolute; left: 3px; top: 3px;
+      width: 14px; height: 14px; background: var(--text2); border-radius: 50%;
       transition: transform 0.2s ease, background 0.2s;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
     }
-    .toggle-switch input:checked + .toggle-track { background: var(--green); }
-    .toggle-switch input:checked + .toggle-track::before {
-      transform: translateX(16px);
-      background: white;
-    }
+    .toggle-switch input:checked + .toggle-track { background: var(--red); }
+    .toggle-switch input:checked + .toggle-track::before { transform: translateX(16px); background: #fff; }
 
-    /* ── Sites list ── */
-    .sites-list {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1px;
-      background: var(--border);
+    /* ── AI site chip selector ───────────────────────────────────── */
+    .ai-chips {
+      display: flex; flex-wrap: wrap; gap: 7px;
+      padding: 14px;
     }
-
-    .site-item {
-      background: var(--surface);
-      padding: 9px 16px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      cursor: pointer;
-      transition: background 0.12s;
-    }
-    .site-item:hover { background: var(--surface2); }
-
-    .site-check {
-      width: 14px;
-      height: 14px;
-      flex-shrink: 0;
-      accent-color: var(--brand);
-      cursor: pointer;
-    }
-
-    .site-name {
-      font-family: var(--mono);
-      font-size: 11px;
-      color: var(--muted);
-      transition: color 0.15s;
-      flex: 1;
-    }
-    .site-item:hover .site-name { color: var(--text2); }
-    .site-item input:checked ~ .site-name { color: var(--text); }
-
-    /* ── Custom blocklist ── */
-    .custom-section {
-      border-top: 1px solid var(--border);
-      padding: 14px 16px 0;
-    }
-
-    .custom-label {
-      font-family: var(--mono);
-      font-size: 9px;
-      font-weight: 600;
-      letter-spacing: 1.2px;
-      text-transform: uppercase;
-      color: var(--muted);
-      display: block;
-      margin-bottom: 10px;
-    }
-
-    .add-row {
-      display: flex;
-      gap: 8px;
-      padding-bottom: 14px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .text-input {
-      flex: 1;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      font-family: var(--mono);
-      font-size: 12px;
-      padding: 9px 11px;
-      outline: none;
-      transition: border-color 0.15s;
-    }
-    .text-input:focus { border-color: var(--brand); }
-    .text-input::placeholder { color: var(--muted); }
-
-    .btn-add {
-      background: var(--brand-dim);
-      border: 1px solid rgba(99, 102, 241, 0.25);
-      border-radius: 8px;
-      color: #a5b4fc;
-      cursor: pointer;
-      font-family: var(--sans);
-      font-size: 12px;
-      font-weight: 500;
-      padding: 9px 16px;
+    .ai-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 13px; border-radius: 100px;
+      border: 1px solid var(--b2); background: var(--s1);
+      font-family: var(--mono); font-size: 11px; font-weight: 500;
+      color: var(--muted); cursor: pointer; user-select: none;
       transition: all 0.15s;
-      white-space: nowrap;
     }
-    .btn-add:hover {
-      background: rgba(99, 102, 241, 0.18);
-      border-color: rgba(99, 102, 241, 0.4);
-      color: #c7d2fe;
+    .ai-chip:hover { border-color: rgba(255,255,255,0.15); color: var(--text2); }
+    .ai-chip.active {
+      border-color: rgba(200,25,28,0.55);
+      background: var(--red-d); color: var(--red);
     }
+    .ai-chip-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: currentColor; flex-shrink: 0;
+      opacity: 0; transition: opacity 0.15s;
+    }
+    .ai-chip.active .ai-chip-dot { opacity: 1; }
+
+    /* Custom blocklist */
+    .custom-section {
+      border-top: 1px solid var(--b1); padding: 14px 16px 12px;
+    }
+    .custom-label {
+      font-family: var(--mono); font-size: 9px; font-weight: 600;
+      letter-spacing: 1.2px; text-transform: uppercase;
+      color: var(--muted); display: block; margin-bottom: 10px;
+    }
+    .add-row {
+      display: flex; gap: 8px;
+      padding-bottom: 12px; border-bottom: 1px solid var(--b1);
+    }
+    .text-input {
+      flex: 1; background: var(--bg); border: 1px solid var(--b1);
+      border-radius: 8px; color: var(--text); font-family: var(--mono);
+      font-size: 12px; padding: 9px 11px; outline: none; transition: border-color 0.15s;
+    }
+    .text-input:focus { border-color: #fff; }
+    .text-input::placeholder { color: var(--muted); }
+    .btn-add {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12); border-radius: 8px;
+      color: var(--text); cursor: pointer; font-family: var(--sans);
+      font-size: 12px; font-weight: 600; padding: 9px 16px;
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .btn-add:hover { background: rgba(255,255,255,0.11); border-color: rgba(255,255,255,0.28); color: #fff; }
     .btn-add:active { transform: scale(0.97); }
-
-    .custom-list { padding: 10px 0 2px; min-height: 32px; }
-
-    .custom-empty {
-      font-family: var(--mono);
-      font-size: 11px;
-      color: var(--muted);
-    }
-
+    .custom-list { padding: 10px 0 2px; min-height: 28px; }
+    .custom-empty { font-family: var(--mono); font-size: 11px; color: var(--muted); }
     .custom-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 4px 8px;
-      font-family: var(--mono);
-      font-size: 11px;
-      color: var(--text);
-      margin: 0 6px 6px 0;
-      transition: border-color 0.15s;
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--s2); border: 1px solid var(--b1); border-radius: 6px;
+      padding: 4px 8px; font-family: var(--mono); font-size: 11px;
+      color: var(--text); margin: 0 6px 6px 0; transition: border-color 0.15s;
     }
-    .custom-tag:hover { border-color: var(--border2); }
-
     .custom-tag button {
-      background: none;
-      border: none;
-      color: var(--muted);
-      cursor: pointer;
-      font-size: 15px;
-      line-height: 1;
-      padding: 0;
-      display: flex;
-      align-items: center;
-      transition: color 0.12s;
+      background: none; border: none; color: var(--muted); cursor: pointer;
+      font-size: 15px; line-height: 1; padding: 0; display: flex;
+      align-items: center; transition: color 0.12s;
     }
-    .custom-tag button:hover { color: #fb7185; }
+    .custom-tag button:hover { color: var(--red); }
 
-    /* ── Row setting ── */
+    /* ── Row setting ─────────────────────────────────────────────── */
     .row-setting {
-      padding: 15px 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 20px;
+      padding: 14px 16px;
+      display: flex; align-items: center; justify-content: space-between; gap: 20px;
       transition: background 0.12s;
     }
-    .row-setting:hover { background: var(--surface2); }
-    .row-setting + .row-setting { border-top: 1px solid var(--border); }
-    .row-setting-no-hover:hover { background: transparent; }
-
+    .row-setting:hover { background: var(--s2); }
+    .row-setting + .row-setting { border-top: 1px solid var(--b1); }
     .row-left { min-width: 0; flex: 1; }
     .row-label { font-size: 13px; font-weight: 500; color: var(--text); }
-    .row-sub {
-      font-size: 11px;
-      color: var(--text2);
-      margin-top: 3px;
-      line-height: 1.5;
-    }
-
+    .row-sub { font-size: 11px; color: var(--text2); margin-top: 3px; line-height: 1.5; }
     .select-input {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      font-family: var(--mono);
-      font-size: 12px;
-      padding: 7px 11px;
-      outline: none;
-      cursor: pointer;
-      transition: border-color 0.15s;
-      flex-shrink: 0;
+      background: var(--bg); border: 1px solid var(--b1); border-radius: 8px;
+      color: var(--text); font-family: var(--mono); font-size: 12px;
+      padding: 7px 10px; outline: none; cursor: pointer;
+      transition: border-color 0.15s; flex-shrink: 0;
     }
-    .select-input:focus { border-color: var(--brand); }
-
-    /* Shortcut row */
+    .select-input:focus { border-color: #fff; }
     .shortcut-row {
-      padding: 11px 16px 13px;
-      border-top: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 11px;
-      color: var(--text2);
+      padding: 10px 16px 12px; border-top: 1px solid var(--b1);
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11px; color: var(--text2);
     }
-
     .kbd {
-      background: var(--surface2);
-      border: 1px solid var(--border2);
-      border-radius: 5px;
-      padding: 2px 7px;
-      font-family: var(--mono);
-      font-size: 11px;
-      color: var(--text);
+      background: var(--s2); border: 1px solid var(--b2); border-radius: 5px;
+      padding: 2px 7px; font-family: var(--mono); font-size: 11px; color: var(--text);
     }
 
-    /* ── Schedule ── */
-    .schedule-body {
-      padding: 16px;
-      border-top: 1px solid var(--border);
-      background: rgba(99,102,241,0.02);
+    /* ── Schedule ────────────────────────────────────────────────── */
+    .sched-enable-card {
+      display: flex; align-items: center; gap: 16px;
+      padding: 20px 22px; border-radius: 14px;
+      background: var(--s1); border: 1px solid var(--b1);
+      transition: border-color 0.25s; cursor: pointer;
+    }
+    .sched-enable-card.on { border-color: rgba(200,25,28,0.35); }
+    .sched-enable-icon {
+      width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+      background: var(--bg); border: 1px solid var(--b1);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted); transition: all 0.25s;
+    }
+    .sched-enable-card.on .sched-enable-icon {
+      background: rgba(200,25,28,0.08);
+      border-color: rgba(200,25,28,0.3); color: var(--red);
+    }
+    .sched-enable-info { flex: 1; }
+    .sched-enable-title { font-size: 14px; font-weight: 600; color: var(--text); }
+    .sched-enable-sub { font-size: 12px; color: var(--text2); margin-top: 3px; }
+
+    .sched-body {
+      display: flex; flex-direction: column; gap: 30px;
+    }
+    .sched-section-title {
+      font-family: var(--mono); font-size: 9px; font-weight: 600;
+      letter-spacing: 1.4px; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 14px;
     }
 
-    .schedule-row-label {
-      font-size: 11px;
-      font-weight: 500;
-      color: var(--text2);
-      margin-bottom: 10px;
+    /* Day circles */
+    .sched-day-row {
+      display: flex; gap: 10px;
     }
-
-    .day-grid {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-      margin-bottom: 18px;
-    }
-
     .day-chip {
-      width: 38px;
-      height: 38px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 9px;
-      border: 1px solid var(--border);
-      background: var(--surface2);
-      font-family: var(--mono);
-      font-size: 11px;
-      font-weight: 500;
-      color: var(--muted);
-      cursor: pointer;
-      transition: all 0.15s;
-      user-select: none;
+      width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      border: 1.5px solid var(--b2); background: var(--bg);
+      font-family: var(--mono); font-size: 11px; font-weight: 600;
+      color: var(--muted); cursor: pointer; user-select: none;
+      transition: border-color 0.2s, background 0.2s, color 0.2s, box-shadow 0.2s;
     }
-    .day-chip:hover { border-color: var(--border2); color: var(--text2); }
+    .day-chip:hover { border-color: rgba(255,255,255,0.2); color: var(--text2); }
     .day-chip.selected {
-      background: var(--brand-dim);
-      border-color: rgba(99, 102, 241, 0.35);
-      color: #a5b4fc;
+      border-color: rgba(200,25,28,0.65);
+      background: rgba(200,25,28,0.08); color: #fff;
+      box-shadow: 0 0 12px rgba(200,25,28,0.2);
     }
 
-    .hour-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 12px;
-      color: var(--text2);
+    /* Time window row */
+    .sched-time-row {
+      display: flex; align-items: center; gap: 20px;
+    }
+    .sched-time-field { flex-shrink: 0; text-align: center; }
+    .sched-time-label {
+      font-family: var(--mono); font-size: 9px; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;
+    }
+    .sched-time-select {
+      background: var(--bg); border: 1px solid var(--b1); border-radius: 10px;
+      color: var(--text); font-family: var(--mono); font-size: 20px; font-weight: 700;
+      padding: 10px 14px; outline: none; cursor: pointer;
+      transition: border-color 0.15s; min-width: 100px; text-align: center;
+      -webkit-appearance: none; appearance: none;
+    }
+    .sched-time-select:focus { border-color: rgba(200,25,28,0.5); }
+
+    /* Timeline bar */
+    .sched-timeline-wrap { flex: 1; }
+    .sched-timeline-bar {
+      height: 6px; border-radius: 3px; background: var(--b2);
+      position: relative; overflow: hidden; margin-bottom: 8px;
+    }
+    .sched-timeline-fill {
+      position: absolute; top: 0; bottom: 0;
+      background: linear-gradient(to right, rgba(200,25,28,0.6), var(--red));
+      border-radius: 3px;
+      transition: left 0.3s ease, width 0.3s ease;
+    }
+    .sched-timeline-ticks {
+      display: flex; justify-content: space-between;
+      font-family: var(--mono); font-size: 9px; color: var(--muted);
     }
 
-    .hour-input {
-      width: 64px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      font-family: var(--mono);
-      font-size: 13px;
-      padding: 7px 8px;
-      outline: none;
-      text-align: center;
-      transition: border-color 0.15s;
+    /* Preview box */
+    .sched-preview {
+      background: var(--bg); border: 1px solid var(--b1);
+      border-radius: 10px; padding: 14px 18px;
+      font-family: var(--mono); font-size: 12px; color: var(--muted);
+      line-height: 1.7; transition: border-color 0.2s;
     }
-    .hour-input:focus { border-color: var(--brand); }
+    .sched-preview.live {
+      border-color: rgba(200,25,28,0.25); color: var(--text2);
+    }
+    .sched-preview strong { color: var(--text); font-weight: 600; }
 
-    /* ── PIN section ── */
-    .pin-section { padding: 16px; }
-
-    .pin-status {
-      font-family: var(--mono);
-      font-size: 11px;
-      color: var(--muted);
-      margin-bottom: 14px;
-      display: flex;
-      align-items: center;
-      gap: 7px;
+    /* ── Security / PIN ──────────────────────────────────────────── */
+    .pin-status-card {
+      display: flex; align-items: center; gap: 16px;
+      padding: 20px 22px; border-radius: 14px;
+      background: var(--s1); border: 1px solid var(--b1);
+      transition: border-color 0.25s;
     }
-    .pin-status.set { color: var(--green); }
-    .pin-status-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: currentColor;
-      flex-shrink: 0;
+    .pin-status-card.protected { border-color: rgba(200,25,28,0.35); }
+    .pin-status-icon {
+      width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+      background: var(--bg); border: 1px solid var(--b1);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted); transition: all 0.25s;
     }
-
-    .pin-form {
-      display: flex;
-      gap: 8px;
-      align-items: flex-end;
-      flex-wrap: wrap;
+    .pin-status-card.protected .pin-status-icon {
+      background: rgba(200,25,28,0.08);
+      border-color: rgba(200,25,28,0.3); color: var(--red);
     }
-
-    .pin-field {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
+    .pin-status-info { flex: 1; min-width: 0; }
+    .pin-status-title { font-size: 14px; font-weight: 600; color: var(--text); }
+    .pin-status-sub { font-size: 12px; color: var(--text2); margin-top: 3px; }
+    .pin-status-badge {
+      font-family: var(--mono); font-size: 9px; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase;
+      padding: 5px 12px; border-radius: 100px; flex-shrink: 0;
+      border: 1px solid var(--b1); color: var(--muted);
+      transition: all 0.25s;
     }
-    .pin-field label {
-      font-size: 10px;
-      color: var(--text2);
-      font-family: var(--mono);
-      letter-spacing: 0.3px;
+    .pin-status-card.protected .pin-status-badge {
+      border-color: rgba(200,25,28,0.4);
+      color: var(--red); background: rgba(200,25,28,0.08);
     }
 
-    .pin-input-sm {
-      width: 112px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      font-family: var(--mono);
-      font-size: 16px;
-      letter-spacing: 5px;
-      padding: 9px 10px;
-      outline: none;
-      text-align: center;
-      transition: border-color 0.15s;
+    .pin-form-card {
+      background: var(--s1); border: 1px solid var(--b1);
+      border-radius: 14px; padding: 24px 22px;
     }
-    .pin-input-sm:focus { border-color: var(--brand); }
-
-    .btn-sm {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text2);
-      cursor: pointer;
-      font-family: var(--sans);
-      font-size: 12px;
-      font-weight: 500;
-      padding: 9px 16px;
-      transition: all 0.15s;
-      white-space: nowrap;
+    .pin-form-title {
+      font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 20px;
     }
-    .btn-sm:hover { border-color: var(--border2); color: var(--text); background: var(--surface2); }
-    .btn-sm:active { transform: scale(0.97); }
-    .btn-sm.danger:hover { border-color: rgba(244, 63, 94, 0.4); color: #fb7185; }
-
-    .pin-msg { font-size: 11px; min-height: 18px; margin-top: 10px; font-family: var(--mono); }
-    .pin-msg.ok  { color: var(--green); }
-    .pin-msg.err { color: #fb7185; }
-
-    /* ── Stats ── */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1px;
-      background: var(--border);
+    .pin-inputs-row {
+      display: flex; gap: 12px; margin-bottom: 16px;
     }
-
-    .stat-box {
-      background: var(--surface);
-      padding: 18px 10px 16px;
-      text-align: center;
-      transition: background 0.12s;
-      cursor: default;
+    .pin-input-field { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+    .pin-input-label {
+      font-family: var(--mono); font-size: 9px; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 1px;
     }
-    .stat-box:hover { background: var(--surface2); }
-
-    .stat-big {
-      font-family: var(--mono);
-      font-size: 24px;
-      font-weight: 700;
-      color: var(--text);
-      letter-spacing: -1px;
-      line-height: 1;
+    .pin-input-lg {
+      width: 100%; background: var(--bg); border: 1px solid var(--b1);
+      border-radius: 10px; color: var(--text); font-family: var(--mono);
+      font-size: 22px; letter-spacing: 8px; padding: 13px 16px;
+      outline: none; text-align: center; transition: border-color 0.15s;
     }
-    .stat-big.orange { color: var(--amber); }
-
-    .stat-lbl {
-      font-size: 9px;
-      color: var(--muted);
-      margin-top: 6px;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      font-family: var(--mono);
+    .pin-input-lg:focus { border-color: rgba(200,25,28,0.5); }
+    .pin-input-lg::placeholder { letter-spacing: 4px; font-size: 18px; color: var(--b2); }
+    .btn-set-pin {
+      width: 100%; background: var(--red); border: none; border-radius: 10px;
+      color: #fff; cursor: pointer; font-family: var(--sans);
+      font-size: 13px; font-weight: 700; padding: 13px;
+      transition: opacity 0.15s, transform 0.1s;
     }
-
-    .stats-footer {
-      padding: 12px 16px;
-      border-top: 1px solid var(--border);
-      display: flex;
-      justify-content: flex-end;
+    .btn-set-pin:hover { opacity: 0.85; }
+    .btn-set-pin:active { transform: scale(0.98); }
+    .pin-msg {
+      font-family: var(--mono); font-size: 11px; min-height: 18px;
+      margin-top: 14px; text-align: center;
     }
+    .pin-msg.ok  { color: var(--text); }
+    .pin-msg.err { color: var(--red); }
 
-    .btn-ghost {
-      background: none;
-      border: 1px solid var(--border);
-      border-radius: 7px;
-      color: var(--muted);
-      cursor: pointer;
-      font-family: var(--sans);
-      font-size: 11px;
-      font-weight: 500;
-      padding: 6px 14px;
-      transition: all 0.15s;
+    .pin-remove-section {
+      background: var(--bg); border: 1px solid rgba(200,25,28,0.2);
+      border-radius: 14px; padding: 18px 22px;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
     }
-    .btn-ghost:hover {
-      border-color: rgba(244, 63, 94, 0.35);
-      color: #fb7185;
+    .pin-remove-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+    .pin-remove-sub { font-size: 12px; color: var(--text2); line-height: 1.5; }
+    .btn-remove-pin {
+      background: transparent; border: 1px solid rgba(200,25,28,0.4);
+      border-radius: 8px; color: var(--red); cursor: pointer;
+      font-family: var(--sans); font-size: 12px; font-weight: 600;
+      padding: 9px 18px; transition: all 0.15s; flex-shrink: 0; white-space: nowrap;
     }
-    .btn-ghost:active { transform: scale(0.97); }
+    .btn-remove-pin:hover { background: rgba(200,25,28,0.08); border-color: var(--red); }
+    .btn-remove-pin:active { transform: scale(0.97); }
 
-    /* ── Save indicator ── */
+    /* ── Save toast ──────────────────────────────────────────────── */
     #saveIndicator {
-      position: fixed;
-      bottom: 24px;
-      right: 28px;
-      background: var(--surface);
-      border: 1px solid rgba(16, 185, 129, 0.35);
-      border-radius: 9px;
-      color: var(--green);
-      font-family: var(--mono);
-      font-size: 11px;
-      font-weight: 500;
-      padding: 9px 16px;
-      opacity: 0;
+      position: fixed; bottom: 28px; right: 32px;
+      background: var(--s1); border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 12px; color: var(--text);
+      font-family: var(--mono); font-size: 11px; font-weight: 500;
+      padding: 11px 20px; opacity: 0;
       transition: opacity 0.2s ease, transform 0.2s ease;
-      transform: translateY(6px);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-      pointer-events: none;
+      transform: translateY(8px);
+      display: flex; align-items: center; gap: 9px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.5); pointer-events: none;
+      z-index: 150;
     }
-    #saveIndicator.show {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    #saveIndicator.show { opacity: 1; transform: translateY(0); }
     .save-check {
-      width: 16px;
-      height: 16px;
-      background: rgba(16, 185, 129, 0.15);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
+      width: 18px; height: 18px; background: rgba(255,255,255,0.1);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
   </style>
 </head>
 <body>
 
-  <!-- PIN lock modal -->
+  <!-- PIN modal -->
   <div id="pinModal" class="hidden">
     <div class="pin-box">
       <div class="pin-box-icon">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
           <rect x="3" y="11" width="18" height="12" rx="3" stroke="currentColor" stroke-width="1.6"/>
           <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
           <circle cx="12" cy="16.5" r="1.5" fill="currentColor"/>
@@ -737,158 +802,98 @@
       </div>
       <h2>Settings locked</h2>
       <p class="pin-box-desc">Enter your PIN to access settings</p>
-      <input type="password" class="pin-input" id="pinModalInput" maxlength="8" placeholder="·  ·  ·  ·" inputmode="numeric">
+      <input type="password" class="pin-input" id="pinModalInput" maxlength="8"
+        placeholder="&middot;  &middot;  &middot;  &middot;" inputmode="numeric">
       <div class="pin-error" id="pinModalError"></div>
       <button class="btn-primary" id="pinModalSubmit">Unlock</button>
     </div>
   </div>
 
-  <div id="mainContent">
-    <div class="page-header">
-      <div class="page-logo">CF</div>
-      <div class="page-header-text">
-        <h1>CF Focus</h1>
-        <p>AI Blocker for Competitive Programming</p>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-badge">CF</div>
+      <div>
+        <div class="sidebar-logo-name">CF Focus</div>
+        <div class="sidebar-logo-sub">AI Blocker</div>
       </div>
-      <span class="version-tag">v2.0</span>
     </div>
 
-    <div class="content">
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Analytics</div>
 
-      <!-- ── PLATFORMS ── -->
-      <div class="section">
-        <div class="section-title">
-          <span class="section-title-text">Focus Platforms</span>
-          <div class="section-title-line"></div>
-        </div>
-        <div class="card">
-          <div class="toggle-grid" id="platformGrid"></div>
-        </div>
+      <div class="nav-item active" data-view="overview">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
+          <rect x="1" y="9" width="3" height="6" rx="1" fill="currentColor"/>
+          <rect x="6" y="5" width="3" height="10" rx="1" fill="currentColor"/>
+          <rect x="11" y="1" width="3" height="14" rx="1" fill="currentColor"/>
+        </svg>
+        Overview
       </div>
 
-      <!-- ── BLOCKED SITES ── -->
-      <div class="section">
-        <div class="section-title">
-          <span class="section-title-text">Blocked AI Sites</span>
-          <div class="section-title-line"></div>
-        </div>
-        <div class="card">
-          <div class="sites-list" id="defaultSites"></div>
-          <div class="custom-section">
-            <span class="custom-label">Custom Sites</span>
-            <div class="add-row">
-              <input class="text-input" id="customInput" type="text" placeholder="e.g. khanacademy.org">
-              <button class="btn-add" id="customAddBtn">Add site</button>
-            </div>
-            <div class="custom-list" id="customList"></div>
-          </div>
-        </div>
+      <div class="nav-section-label">Settings</div>
+
+      <div class="nav-item" data-view="platforms">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
+          <rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
+          <rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
+          <rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
+          <rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
+        </svg>
+        Platforms
       </div>
 
-      <!-- ── SNOOZE ── -->
-      <div class="section">
-        <div class="section-title">
-          <span class="section-title-text">Snooze</span>
-          <div class="section-title-line"></div>
-        </div>
-        <div class="card">
-          <div class="row-setting">
-            <div class="row-left">
-              <div class="row-label">Default snooze duration</div>
-              <div class="row-sub">How long to pause blocking when you snooze</div>
-            </div>
-            <select class="select-input" id="snoozeDuration">
-              <option value="5">5 min</option>
-              <option value="15" selected>15 min</option>
-              <option value="30">30 min</option>
-              <option value="60">1 hour</option>
-              <option value="120">2 hours</option>
-            </select>
-          </div>
-          <div class="shortcut-row">
-            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-              <rect x="1.5" y="4.5" width="13" height="9" rx="2" stroke="currentColor" stroke-width="1.2"/>
-              <path d="M5 1.5v3M8 1.5v3M11 1.5v3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-            </svg>
-            <span>
-              Toggle snooze with <span class="kbd">Ctrl+Shift+B</span>
-              &nbsp;·&nbsp;
-              Mac: <span class="kbd">⌘⇧B</span>
-            </span>
-          </div>
-        </div>
+      <div class="nav-item" data-view="sites">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
+          <path d="M8 1.5L2 4v4c0 3.2 2.5 5.6 6 6.5 3.5-.9 6-3.3 6-6.5V4L8 1.5z"
+            stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+          <path d="M5.5 8l1.8 1.8 3.2-3.6" stroke="currentColor" stroke-width="1.3"
+            stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Blocked Sites
       </div>
 
-      <!-- ── SCHEDULE ── -->
-      <div class="section">
-        <div class="section-title">
-          <span class="section-title-text">Scheduled Blocking</span>
-          <div class="section-title-line"></div>
-        </div>
-        <div class="card">
-          <div class="row-setting">
-            <div class="row-left">
-              <div class="row-label">Enable schedule</div>
-              <div class="row-sub">Block AI during set hours regardless of open tabs</div>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" id="scheduleEnabled">
-              <span class="toggle-track"></span>
-            </label>
-          </div>
-          <div class="schedule-body" id="scheduleBody">
-            <div class="schedule-row-label">Active days</div>
-            <div class="day-grid" id="dayGrid"></div>
-            <div class="hour-row">
-              <span>From</span>
-              <input class="hour-input" id="startHour" type="number" min="0" max="23" value="9">
-              <span>:00 &nbsp;to</span>
-              <input class="hour-input" id="endHour" type="number" min="0" max="23" value="21">
-              <span>:00</span>
-            </div>
-          </div>
-        </div>
+      <div class="nav-item" data-view="schedule">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
+          <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M8 4.5V8l2.5 2" stroke="currentColor" stroke-width="1.3"
+            stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Schedule
       </div>
 
-      <!-- ── PIN ── -->
-      <div class="section">
-        <div class="section-title">
-          <span class="section-title-text">PIN Lock</span>
-          <div class="section-title-line"></div>
-        </div>
-        <div class="card">
-          <div class="pin-section">
-            <div class="pin-status" id="pinStatus">
-              <span class="pin-status-dot"></span>
-              No PIN set — settings are unlocked
-            </div>
-            <div class="pin-form" id="pinForm">
-              <div class="pin-field">
-                <label>New PIN (4–8 digits)</label>
-                <input type="password" class="pin-input-sm" id="newPin" maxlength="8" placeholder="••••" inputmode="numeric">
-              </div>
-              <div class="pin-field">
-                <label>Confirm PIN</label>
-                <input type="password" class="pin-input-sm" id="confirmPin" maxlength="8" placeholder="••••" inputmode="numeric">
-              </div>
-              <button class="btn-sm" id="setPinBtn">Set PIN</button>
-              <button class="btn-sm danger" id="removePinBtn" style="display:none">Remove</button>
-            </div>
-            <div class="pin-msg" id="pinMsg"></div>
-          </div>
-        </div>
+      <div class="nav-item" data-view="security">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
+          <rect x="2" y="7" width="12" height="8" rx="2" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M4.5 7V5a3.5 3.5 0 0 1 7 0v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          <circle cx="8" cy="11" r="1" fill="currentColor"/>
+        </svg>
+        Security
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-version">v2.0</div>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <div class="main-area" id="mainContent">
+
+    <!-- ── VIEW: Overview (Stats) ── -->
+    <div class="view active" id="view-overview">
+      <div class="view-header">
+        <div class="view-title">Overview</div>
+        <div class="view-sub">Your focus stats and performance</div>
       </div>
 
-      <!-- ── STATS ── -->
-      <div class="section">
-        <div class="section-title">
-          <span class="section-title-text">Focus Stats</span>
-          <div class="section-title-line"></div>
-        </div>
-        <div class="card">
+      <div class="stats-band">
+        <div class="wrap">
+          <div class="stats-band-label">Your Performance</div>
+
           <div class="stats-grid">
             <div class="stat-box">
-              <div class="stat-big orange" id="statStreak">0</div>
+              <div class="stat-big amber" id="statStreak">0</div>
               <div class="stat-lbl">Day Streak</div>
             </div>
             <div class="stat-box">
@@ -900,23 +905,334 @@
               <div class="stat-lbl">Sessions</div>
             </div>
             <div class="stat-box">
-              <div class="stat-big" id="statMinutes">0</div>
-              <div class="stat-lbl">Min Focus</div>
+              <div class="stat-big" id="statHours">0</div>
+              <div class="stat-lbl">Focus Hours</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-big red" id="statBlocks">0</div>
+              <div class="stat-lbl">AI Resisted</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-big green" id="statSolved">0</div>
+              <div class="stat-lbl">Self-Solved</div>
             </div>
           </div>
+
+          <!-- Vertical bar chart + donut -->
+          <div class="viz-panel">
+            <div class="vbar-area">
+              <div class="vbar-eyebrow">Performance Overview</div>
+              <div class="vbar-chart">
+                <div class="vbar-grid">
+                  <div class="vbar-grid-line"></div>
+                  <div class="vbar-grid-line"></div>
+                  <div class="vbar-grid-line"></div>
+                </div>
+                <div class="vbar-cols">
+                  <div class="vbar-col">
+                    <div class="vbar-val" id="chartSessionsVal">0</div>
+                    <div class="vbar-track"><div class="vbar-fill f-neutral" id="chartSessions"></div></div>
+                    <div class="vbar-lbl">Sessions</div>
+                  </div>
+                  <div class="vbar-col">
+                    <div class="vbar-val" id="chartHoursVal">0</div>
+                    <div class="vbar-track"><div class="vbar-fill f-neutral" id="chartHours"></div></div>
+                    <div class="vbar-lbl">Hours</div>
+                  </div>
+                  <div class="vbar-col">
+                    <div class="vbar-val" id="chartBlocksVal">0</div>
+                    <div class="vbar-track"><div class="vbar-fill f-red" id="chartBlocks"></div></div>
+                    <div class="vbar-lbl">Blocked</div>
+                  </div>
+                  <div class="vbar-col">
+                    <div class="vbar-val" id="chartSolvedVal">0</div>
+                    <div class="vbar-track"><div class="vbar-fill f-white" id="chartSolved"></div></div>
+                    <div class="vbar-lbl">Solved</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Donut ring: resistance rate -->
+            <div class="donut-wrap">
+              <svg class="donut-svg" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="46" fill="none" stroke="#141414" stroke-width="12"/>
+                <circle id="donutArc"
+                  cx="60" cy="60" r="46"
+                  fill="none" stroke="#c8191c" stroke-width="12"
+                  stroke-dasharray="289.03" stroke-dashoffset="289.03"
+                  stroke-linecap="round" transform="rotate(-90 60 60)"/>
+                <text id="statResistRateFooter" x="60" y="55"
+                  text-anchor="middle"
+                  font-family="'JetBrains Mono', monospace"
+                  font-size="22" font-weight="700" fill="#f0f0f0">0%</text>
+                <text x="60" y="70"
+                  text-anchor="middle"
+                  font-family="'Inter', sans-serif"
+                  font-size="8.5" fill="#3a3a3a" letter-spacing="1.2">RESISTANCE</text>
+              </svg>
+              <div class="donut-sub">AI blocked vs self-solved</div>
+            </div>
+          </div>
+
           <div class="stats-footer">
+            <span class="stats-resist-note">
+              Stats update as you use the extension &mdash; keep going!
+            </span>
             <button class="btn-ghost" id="resetStatsBtn">Reset all stats</button>
           </div>
         </div>
       </div>
-
     </div>
-  </div>
 
+    <!-- ── VIEW: Platforms ── -->
+    <div class="view" id="view-platforms">
+      <div class="view-header">
+        <div class="view-title">Platforms</div>
+        <div class="view-sub">Select which coding platforms activate AI blocking</div>
+      </div>
+      <div class="wrap">
+        <div class="settings-wrap">
+
+          <!-- Focus Platforms — free-floating planets, full width -->
+          <div>
+            <div class="section-label-row">
+              <span class="section-label">Focus Platforms</span>
+              <div class="section-label-line"></div>
+            </div>
+            <div id="platformGrid"></div>
+          </div>
+
+          <!-- Snooze Duration — below platforms -->
+          <div>
+            <div class="section-label-row">
+              <span class="section-label">Snooze Duration</span>
+              <div class="section-label-line"></div>
+            </div>
+            <div class="card">
+              <div class="row-setting" style="border-bottom: 1px solid var(--b1);">
+                <div class="row-left">
+                  <div class="row-label">Pause blocking for</div>
+                  <div class="row-sub">Choose how long AI access is unlocked per snooze</div>
+                </div>
+              </div>
+              <div class="snooze-chip-grid" id="snoozeChips">
+                <div class="snooze-chip" data-dur="5">5m</div>
+                <div class="snooze-chip selected" data-dur="15">15m</div>
+                <div class="snooze-chip" data-dur="30">30m</div>
+                <div class="snooze-chip" data-dur="60">1h</div>
+                <div class="snooze-chip" data-dur="120">2h</div>
+              </div>
+              <div class="shortcut-row">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                  <rect x="1.5" y="4.5" width="13" height="9" rx="2" stroke="currentColor" stroke-width="1.2"/>
+                  <path d="M5 1.5v3M8 1.5v3M11 1.5v3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                </svg>
+                <span>Toggle with <span class="kbd">Ctrl+Shift+B</span> &nbsp;&middot;&nbsp; Mac: <span class="kbd">&#x2318;&#x21E7;B</span></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Custom Platforms -->
+          <div class="settings-full">
+            <div class="section-label-row">
+              <span class="section-label">Custom Platforms</span>
+              <div class="section-label-line"></div>
+            </div>
+            <div class="card">
+              <p class="cp-intro">Add any site that should trigger AI blocking when you have it open.</p>
+              <div class="cp-add-row">
+                <input class="text-input" id="cpName" type="text" placeholder="Platform name (e.g. Kattis)" style="flex: 0 0 200px;">
+                <input class="text-input" id="cpDomain" type="text" placeholder="Domain (e.g. open.kattis.com)">
+                <button class="btn-add" id="cpAddBtn">
+                  <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                    <path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                  </svg>
+                  Add
+                </button>
+              </div>
+              <div class="cp-list" id="customPlatformList"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ── VIEW: Blocked Sites ── -->
+    <div class="view" id="view-sites">
+      <div class="view-header">
+        <div class="view-title">Blocked Sites</div>
+        <div class="view-sub">Manage which AI tools are blocked during focus sessions</div>
+      </div>
+      <div class="wrap">
+        <div class="settings-wrap">
+          <div class="settings-full">
+            <div class="card">
+              <div class="sites-hdr">
+                <span class="sites-hdr-title">Click a site to toggle blocking</span>
+                <div class="sites-hdr-count">
+                  <span><span class="sites-count-val" id="sitesEnabledCount">—</span> / <span id="sitesTotalCount">19</span> blocked</span>
+                  <button class="sites-bulk-btn" id="enableAllSites">All on</button>
+                  <button class="sites-bulk-btn" id="disableAllSites">All off</button>
+                </div>
+              </div>
+              <div class="sites-list" id="defaultSites"></div>
+              <div class="custom-section">
+                <span class="custom-label">Custom Sites</span>
+                <div class="add-row">
+                  <input class="text-input" id="customInput" type="text" placeholder="Add any domain, e.g. khanacademy.org">
+                  <button class="btn-add" id="customAddBtn">
+                    <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                      <path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                    </svg>
+                    Add
+                  </button>
+                </div>
+                <div class="custom-list" id="customList"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── VIEW: Schedule ── -->
+    <div class="view" id="view-schedule">
+      <div class="view-header">
+        <div class="view-title">Schedule</div>
+        <div class="view-sub">Automatically block AI on selected days and hours</div>
+      </div>
+      <div class="wrap">
+        <div class="settings-wrap">
+
+          <!-- Enable card -->
+          <div class="sched-enable-card" id="schedEnableCard">
+            <div class="sched-enable-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/>
+                <path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.6"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="sched-enable-info">
+              <div class="sched-enable-title">Auto-Block Schedule</div>
+              <div class="sched-enable-sub">Block AI automatically on selected days and hours</div>
+            </div>
+            <label class="toggle-switch" onclick="event.stopPropagation()">
+              <input type="checkbox" id="scheduleEnabled">
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+
+          <!-- Schedule body — shown when enabled -->
+          <div id="scheduleBody">
+            <div class="sched-body">
+
+              <!-- Active days -->
+              <div>
+                <div class="sched-section-title">Active Days</div>
+                <div class="sched-day-row" id="dayGrid"></div>
+              </div>
+
+              <!-- Time window -->
+              <div>
+                <div class="sched-section-title">Blocking Window</div>
+                <div class="sched-time-row">
+                  <div class="sched-time-field">
+                    <div class="sched-time-label">From</div>
+                    <select class="sched-time-select" id="startHour"></select>
+                  </div>
+                  <div class="sched-timeline-wrap">
+                    <div class="sched-timeline-bar">
+                      <div class="sched-timeline-fill" id="schedTimelineFill"></div>
+                    </div>
+                    <div class="sched-timeline-ticks">
+                      <span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>24h</span>
+                    </div>
+                  </div>
+                  <div class="sched-time-field">
+                    <div class="sched-time-label">Until</div>
+                    <select class="sched-time-select" id="endHour"></select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Live preview -->
+              <div class="sched-preview" id="schedPreview">Schedule not yet configured.</div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ── VIEW: Security ── -->
+    <div class="view" id="view-security">
+      <div class="view-header">
+        <div class="view-title">Security</div>
+        <div class="view-sub">Protect your settings with a PIN lock</div>
+      </div>
+      <div class="wrap">
+        <div class="settings-wrap">
+
+          <!-- Status card -->
+          <div class="pin-status-card" id="pinStatus">
+            <div class="pin-status-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="11" width="18" height="12" rx="3" stroke="currentColor" stroke-width="1.6"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                <circle cx="12" cy="16.5" r="1.5" fill="currentColor"/>
+              </svg>
+            </div>
+            <div class="pin-status-info">
+              <div class="pin-status-title" id="pinStatusTitle">No PIN set</div>
+              <div class="pin-status-sub" id="pinStatusSub">Your settings are unlocked</div>
+            </div>
+            <span class="pin-status-badge" id="pinStatusBadge">Unprotected</span>
+          </div>
+
+          <!-- Set PIN form -->
+          <div class="pin-form-card">
+            <div class="pin-form-title">Set a new PIN</div>
+            <div class="pin-inputs-row">
+              <div class="pin-input-field">
+                <div class="pin-input-label">New PIN (4&ndash;8 digits)</div>
+                <input type="password" class="pin-input-lg" id="newPin"
+                  maxlength="8" placeholder="&bull; &bull; &bull; &bull;" inputmode="numeric">
+              </div>
+              <div class="pin-input-field">
+                <div class="pin-input-label">Confirm PIN</div>
+                <input type="password" class="pin-input-lg" id="confirmPin"
+                  maxlength="8" placeholder="&bull; &bull; &bull; &bull;" inputmode="numeric">
+              </div>
+            </div>
+            <button class="btn-set-pin" id="setPinBtn">Set PIN</button>
+            <div class="pin-msg" id="pinMsg"></div>
+          </div>
+
+          <!-- Remove PIN — only shown when PIN is active -->
+          <div class="pin-remove-section" id="removePinSection" style="display:none">
+            <div>
+              <div class="pin-remove-title">Remove PIN Protection</div>
+              <div class="pin-remove-sub">Anyone with access to this browser can change settings.</div>
+            </div>
+            <button class="btn-remove-pin" id="removePinBtn">Remove PIN</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main-area -->
+
+  <!-- Save toast -->
   <div id="saveIndicator">
     <div class="save-check">
       <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
-        <path d="M1.5 5.5l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M1.5 5.5l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.5"
+          stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </div>
     Saved

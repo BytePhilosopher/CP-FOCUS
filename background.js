@@ -39,6 +39,7 @@ function getSettings() {
     enabledPlatforms: ['codeforces', 'leetcode', 'atcoder', 'hackerrank', 'codechef'],
     disabledDefaults: [],
     customBlocklist: [],
+    customPlatforms: [],
     snoozeUntil: 0,
     snoozeDuration: 15,
     schedule: { enabled: false, days: [1, 2, 3, 4, 5], startHour: 9, endHour: 21 },
@@ -56,6 +57,9 @@ function getLocalState() {
     currentStreak: 0,
     longestStreak: 0,
     lastSessionDate: null,
+    focusSession: null,   // { endTime, hardcore, duration }
+    aiBlocksAvoided: 0,
+    problemsSolved: 0,
   }, resolve));
 }
 
@@ -86,7 +90,9 @@ function makeDNRRule(id, domain, name) {
     priority: 1,
     action: {
       type: 'redirect',
-      redirect: { extensionPath: `/blocked.html?from=${encodeURIComponent(name)}` },
+      redirect: {
+        extensionPath: `/blocked.html?from=${encodeURIComponent(name)}&domain=${encodeURIComponent(domain)}`,
+      },
     },
     condition: {
       urlFilter: `*${domain}*`,
@@ -98,22 +104,30 @@ function makeDNRRule(id, domain, name) {
 // ─── Core: sync blocking state ────────────────────────────────────────────────
 
 async function syncBlockingState() {
-  const settings = await getSettings();
+  const [settings, local] = await Promise.all([getSettings(), getLocalState()]);
 
-  // Count focus platform tabs
   const tabs = await chrome.tabs.query({});
   const focusTabs = tabs.filter(t => {
     const p = getActivePlatform(t.url);
-    return p && settings.enabledPlatforms.includes(p);
+    if (p && settings.enabledPlatforms.includes(p)) return true;
+    // Check user-added custom platforms
+    if (t.url && settings.customPlatforms && settings.customPlatforms.length) {
+      try {
+        const hostname = new URL(t.url).hostname.replace(/^www\./, '');
+        return settings.customPlatforms.some(cp =>
+          hostname === cp.domain || hostname.endsWith('.' + cp.domain)
+        );
+      } catch (_) {}
+    }
+    return false;
   });
 
-  // Determine if we should block
   const now = Date.now();
   const isSnoozed = settings.snoozeUntil && now < settings.snoozeUntil;
   const isScheduleActive = checkSchedule(settings.schedule);
-  const block = !isSnoozed && (focusTabs.length > 0 || isScheduleActive);
+  const isFocusSession = local.focusSession && now < local.focusSession.endTime;
+  const block = !isSnoozed && (focusTabs.length > 0 || isScheduleActive || isFocusSession);
 
-  // Build DNR rules
   const rules = [];
   let ruleId = 1;
   if (block) {
@@ -127,26 +141,26 @@ async function syncBlockingState() {
     }
   }
 
-  // Replace all dynamic rules atomically
   const existing = await chrome.declarativeNetRequest.getDynamicRules();
   await chrome.declarativeNetRequest.updateDynamicRules({
     removeRuleIds: existing.map(r => r.id),
     addRules: rules,
   });
 
-  // Update badge
-  chrome.action.setBadgeText({ text: block ? 'ON' : '' });
-  if (block) chrome.action.setBadgeBackgroundColor({ color: '#e53e3e' });
+  // Badge: ▶ during focus session, ON during passive blocking
+  const badgeText = isFocusSession ? '\u25B6' : (block ? 'ON' : '');
+  chrome.action.setBadgeText({ text: badgeText });
+  if (block) {
+    chrome.action.setBadgeBackgroundColor({ color: '#c8191c' });
+  }
 
-  // Session tracking
-  const local = await getLocalState();
   if (block && !local.blocking) {
     await startSession();
   } else if (!block && local.blocking) {
     await endSession(local);
   }
 
-  chrome.storage.local.set({ blocking: block, tabCount: focusTabs.length });
+  await chrome.storage.local.set({ blocking: block, tabCount: focusTabs.length });
 }
 
 // ─── Session stats ────────────────────────────────────────────────────────────
@@ -197,31 +211,82 @@ chrome.alarms.onAlarm.addListener(async alarm => {
     await syncBlockingState();
   } else if (alarm.name === 'schedule-check') {
     await syncBlockingState();
+  } else if (alarm.name === 'session-end') {
+    await chrome.storage.local.set({ focusSession: null });
+    await syncBlockingState();
   }
 });
 
-// ─── Messages from popup / options ───────────────────────────────────────────
+// ─── Messages from popup / options / blocked page ─────────────────────────────
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   (async () => {
     switch (msg.type) {
+
+      case 'START_SESSION': {
+        const { duration, hardcore } = msg;
+        const endTime = Date.now() + duration * 60000;
+        await chrome.storage.local.set({ focusSession: { endTime, hardcore, duration } });
+        chrome.alarms.create('session-end', { delayInMinutes: duration });
+        await syncBlockingState();
+        break;
+      }
+
+      case 'END_SESSION': {
+        // Hardcore sessions cannot be manually ended — they run to completion
+        const lEnd = await getLocalState();
+        if (lEnd.focusSession && lEnd.focusSession.hardcore) {
+          sendResponse({ ok: false, reason: 'hardcore' });
+          return;
+        }
+        await chrome.storage.local.set({ focusSession: null });
+        chrome.alarms.clear('session-end');
+        await syncBlockingState();
+        break;
+      }
+
       case 'SNOOZE': {
+        const l = await getLocalState();
+        // Hardcore mode: snooze is completely blocked
+        if (l.focusSession && l.focusSession.hardcore) {
+          sendResponse({ ok: false, reason: 'hardcore' });
+          return;
+        }
         const until = Date.now() + msg.minutes * 60000;
         await chrome.storage.sync.set({ snoozeUntil: until });
         chrome.alarms.create('snooze-end', { delayInMinutes: msg.minutes });
         await syncBlockingState();
         break;
       }
+
       case 'UNSNOOZE': {
         await chrome.storage.sync.set({ snoozeUntil: 0 });
         chrome.alarms.clear('snooze-end');
         await syncBlockingState();
         break;
       }
+
       case 'SETTINGS_CHANGED': {
         await syncBlockingState();
         break;
       }
+
+      case 'AI_BLOCKED': {
+        // Sent by blocked.html on every load — counts resisted temptations
+        const l = await getLocalState();
+        await chrome.storage.local.set({ aiBlocksAvoided: (l.aiBlocksAvoided || 0) + 1 });
+        sendResponse({ ok: true });
+        return;
+      }
+
+      case 'MARK_SOLVED': {
+        // Sent by blocked.html "I solved it" button
+        const l = await getLocalState();
+        await chrome.storage.local.set({ problemsSolved: (l.problemsSolved || 0) + 1 });
+        sendResponse({ ok: true });
+        return;
+      }
+
       case 'GET_STATE': {
         const settings = await getSettings();
         const local = await getLocalState();
@@ -236,14 +301,16 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     }
     sendResponse({ ok: true });
   })();
-  return true; // keep channel open for async response
+  return true;
 });
 
 // ─── Keyboard shortcut ────────────────────────────────────────────────────────
 
 chrome.commands.onCommand.addListener(async command => {
   if (command === 'toggle-snooze') {
-    const settings = await getSettings();
+    const [settings, local] = await Promise.all([getSettings(), getLocalState()]);
+    // Keyboard shortcut disabled in hardcore mode
+    if (local.focusSession && local.focusSession.hardcore) return;
     if (settings.snoozeUntil && Date.now() < settings.snoozeUntil) {
       await chrome.storage.sync.set({ snoozeUntil: 0 });
       chrome.alarms.clear('snooze-end');
@@ -256,16 +323,16 @@ chrome.commands.onCommand.addListener(async command => {
   }
 });
 
-// ─── Storage change listener (settings changed from options page) ─────────────
+// ─── Storage change listener ──────────────────────────────────────────────────
 
-chrome.storage.onChanged.addListener((_changes, area) => {
-  if (area === 'sync') syncBlockingState();
+chrome.storage.onChanged.addListener((changes, area) => {
+  // Only re-sync on settings changes, not snoozeUntil (handled by alarm + direct call)
+  if (area === 'sync' && !('snoozeUntil' in changes)) syncBlockingState();
 });
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 async function init() {
-  // Create alarms (safe to call multiple times — Chrome replaces existing)
   chrome.alarms.create('schedule-check', { periodInMinutes: 1 });
   await syncBlockingState();
 }

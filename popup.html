@@ -5,29 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CF Focus</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:         #0d1117;
-      --surface:    #161b27;
-      --surface-hi: #1c2333;
-      --border:     #21293d;
-      --brand:      #6366f1;
-      --brand-dim:  rgba(99, 102, 241, 0.12);
-      --brand-glow: rgba(99, 102, 241, 0.3);
-      --red:        #f43f5e;
-      --red-dim:    rgba(244, 63, 94, 0.1);
-      --green:      #10b981;
-      --green-dim:  rgba(16, 185, 129, 0.1);
-      --amber:      #f59e0b;
-      --amber-dim:  rgba(245, 158, 11, 0.1);
-      --text:       #e6edf3;
-      --text2:      #7d8590;
-      --muted:      #3d4a5c;
-      --mono:       'JetBrains Mono', monospace;
-      --sans:       'Inter', sans-serif;
+      --bg:    #080808;
+      --s1:    #0e0e0e;
+      --s2:    #141414;
+      --b1:    #1a1a1a;
+      --b2:    #252525;
+      --red:   #c8191c;
+      --red-d: rgba(200,25,28,0.08);
+      --red-m: rgba(200,25,28,0.22);
+      --text:  #f0f0f0;
+      --text2: #777777;
+      --muted: #3a3a3a;
+      --dim: rgba(255,255,255,0.08);
+      --mono:  'JetBrains Mono', monospace;
+      --sans:  'Inter', sans-serif;
     }
 
     body {
@@ -39,305 +35,292 @@
       overflow: hidden;
     }
 
-    /* ── Header ── */
+    /* ── Header ─────────────────────────────────────────────── */
     .header {
-      padding: 13px 14px;
+      height: 42px;
+      padding: 0 12px;
       display: flex;
       align-items: center;
-      gap: 9px;
-      border-bottom: 1px solid var(--border);
+      gap: 8px;
+      border-bottom: 1px solid var(--b1);
     }
-
     .logo {
-      width: 30px;
-      height: 30px;
-      background: var(--brand);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: var(--mono);
-      font-weight: 700;
-      font-size: 12px;
-      color: white;
-      flex-shrink: 0;
-      letter-spacing: -0.5px;
-      box-shadow: 0 0 0 1px rgba(99,102,241,0.4), 0 2px 8px rgba(99,102,241,0.25);
-    }
-
-    .header-info { flex: 1; min-width: 0; }
-    .header-info h1 {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text);
-      letter-spacing: -0.2px;
-    }
-    .header-info p {
-      font-size: 10px;
-      color: var(--text2);
-      margin-top: 1px;
-      font-family: var(--mono);
-    }
-
-    .settings-btn {
-      width: 28px;
-      height: 28px;
-      background: transparent;
-      border: 1px solid var(--border);
+      width: 26px; height: 26px;
+      background: #fff;
       border-radius: 7px;
-      color: var(--text2);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-weight: 700; font-size: 10px;
+      color: #000; flex-shrink: 0; letter-spacing: -0.5px;
     }
-    .settings-btn:hover {
-      background: var(--surface);
-      border-color: #2d3a52;
-      color: var(--text);
+    .header-title {
+      flex: 1; font-size: 13px; font-weight: 700;
+      color: var(--text); letter-spacing: -0.2px;
     }
+    .icon-btn {
+      width: 28px; height: 28px; background: transparent;
+      border: 1px solid var(--b1); border-radius: 7px;
+      color: var(--text2); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: all 0.15s;
+    }
+    .icon-btn:hover { background: var(--s1); border-color: var(--b2); color: var(--text); }
 
-    /* ── Status card ── */
-    .status-wrap { padding: 10px 12px 0; }
-
-    .status-card {
-      padding: 14px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      transition: border-color 0.35s ease, background 0.35s ease;
-      cursor: default;
-    }
-    .status-card.active  {
-      border-color: rgba(244, 63, 94, 0.3);
-      background: rgba(244, 63, 94, 0.06);
-    }
-    .status-card.inactive {
-      border-color: rgba(16, 185, 129, 0.25);
-      background: rgba(16, 185, 129, 0.06);
-    }
-    .status-card.snoozed {
-      border-color: rgba(245, 158, 11, 0.3);
-      background: rgba(245, 158, 11, 0.06);
-    }
-
-    .status-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 10px;
-    }
-
-    .status-label {
-      font-family: var(--mono);
-      font-size: 9px;
-      font-weight: 500;
-      letter-spacing: 1.2px;
-      text-transform: uppercase;
-      color: var(--muted);
-    }
-
-    .status-pill {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      padding: 3px 8px;
-      border-radius: 100px;
-      font-family: var(--mono);
-      font-size: 9px;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-      transition: all 0.35s ease;
-    }
-    .status-pill.active {
-      background: rgba(244, 63, 94, 0.12);
-      color: #fb7185;
-    }
-    .status-pill.inactive {
-      background: rgba(16, 185, 129, 0.12);
-      color: #34d399;
-    }
-    .status-pill.snoozed {
-      background: rgba(245, 158, 11, 0.12);
-      color: #fbbf24;
-    }
-
-    .status-dot {
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      background: currentColor;
-      flex-shrink: 0;
-    }
-    .status-pill.active .status-dot { animation: pulse 1.8s ease-in-out infinite; }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50%       { opacity: 0.3; }
-    }
-
-    .status-body {}
-
-    .status-main {
-      font-size: 18px;
-      font-weight: 700;
-      letter-spacing: -0.6px;
-      line-height: 1;
-      margin-bottom: 4px;
-      transition: color 0.35s ease;
-    }
-    .status-main.active   { color: #fb7185; }
-    .status-main.inactive { color: #34d399; }
-    .status-main.snoozed  { color: #fbbf24; }
-
-    .status-sub {
-      font-size: 11px;
-      color: var(--text2);
-      font-family: var(--mono);
-    }
-
-    /* ── Snooze button ── */
-    .snooze-wrap { padding: 7px 12px 0; }
-
-    .snooze-btn {
-      width: 100%;
-      padding: 9px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text2);
-      cursor: pointer;
-      font-family: var(--sans);
-      font-size: 12px;
-      font-weight: 500;
-      letter-spacing: -0.1px;
-      transition: all 0.15s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-    }
-    .snooze-btn:hover {
-      background: var(--surface-hi);
-      border-color: rgba(245, 158, 11, 0.4);
-      color: #fbbf24;
-    }
-    .snooze-btn:active { transform: scale(0.98); }
-    .snooze-btn.end-snooze {
-      background: rgba(245, 158, 11, 0.08);
-      border-color: rgba(245, 158, 11, 0.3);
-      color: #fbbf24;
-    }
-    .snooze-btn.end-snooze:hover {
-      background: rgba(245, 158, 11, 0.14);
-      border-color: rgba(245, 158, 11, 0.5);
-    }
-
-    /* ── Stats ── */
-    .stats-wrap { padding: 7px 12px 0; }
-
-    .stats-row {
-      display: flex;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      background: var(--surface);
+    /* ── Hero — status + ring, always shown ──────────────────── */
+    #statusCard {
+      position: relative;
+      padding: 14px 14px 10px;
+      text-align: center;
       overflow: hidden;
     }
-
-    .stat {
-      flex: 1;
-      padding: 10px 4px;
-      text-align: center;
-      cursor: default;
-      transition: background 0.15s;
-      position: relative;
-    }
-    .stat:hover { background: var(--surface-hi); }
-    .stat + .stat::before {
+    /* State accent line at top */
+    #statusCard::before {
       content: '';
       position: absolute;
-      left: 0;
-      top: 20%;
-      height: 60%;
-      width: 1px;
-      background: var(--border);
+      top: 0; left: 0; right: 0; height: 2px;
+      transition: background 0.35s ease;
+    }
+    #statusCard.status-card.active::before  { background: var(--red); }
+    #statusCard.status-card.session::before { background: rgba(255,255,255,0.18); }
+    #statusCard.status-card.snoozed::before { background: rgba(200,25,28,0.4); }
+    #statusCard.status-card.inactive::before{ background: rgba(255,255,255,0.1); }
+
+    /* Subtle radial glow when blocking/session */
+    #statusCard.status-card.active::after,
+    #statusCard.status-card.session::after {
+      content: '';
+      position: absolute;
+      top: 20%; left: 50%; transform: translateX(-50%);
+      width: 180px; height: 180px; border-radius: 50%;
+      pointer-events: none;
+      background: radial-gradient(circle, rgba(200,25,28,0.07) 0%, transparent 70%);
     }
 
-    .stat-val {
-      font-family: var(--mono);
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text);
-      letter-spacing: -0.3px;
-      line-height: 1;
-      transition: color 0.2s;
+    .hero-pill-row {
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 11px;
     }
-    .stat-val.highlight { color: var(--brand); }
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 9px; border-radius: 100px;
+      font-family: var(--mono); font-size: 9px;
+      font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase;
+      transition: all 0.25s ease;
+    }
+    .status-pill.active  { background: rgba(200,25,28,0.12); color: var(--red); }
+    .status-pill.session { background: rgba(255,255,255,0.09); color: var(--text); }
+    .status-pill.inactive{ background: var(--dim);            color: var(--text); }
+    .status-pill.snoozed { background: rgba(200,25,28,0.1);   color: var(--red); }
+    .pill-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: currentColor; flex-shrink: 0;
+    }
+    .status-pill.active .pill-dot,
+    .status-pill.session .pill-dot { animation: blink 1.8s ease-in-out infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
 
-    .stat-label {
-      font-size: 9px;
-      color: var(--text2);
-      margin-top: 4px;
-      font-family: var(--mono);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+    /* Ring — always visible */
+    .ring-wrap {
+      display: inline-block; position: relative;
+      margin-bottom: 9px;
     }
 
-    /* ── Footer ── */
-    .footer {
-      margin-top: 10px;
-      padding: 9px 14px 13px;
-      border-top: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+    /* Status text below ring */
+    .status-main {
+      font-size: 19px; font-weight: 700;
+      letter-spacing: -0.7px; line-height: 1;
+      margin-bottom: 3px; transition: color 0.3s ease;
+    }
+    .status-main.active  { color: var(--red); }
+    .status-main.session { color: #ffffff; }
+    .status-main.inactive{ color: var(--text); }
+    .status-main.snoozed { color: var(--red); }
+
+    .status-sub {
+      font-size: 11px; color: var(--text2); font-family: var(--mono);
+    }
+
+    /* ── Session active controls ─────────────────────────────── */
+    #sessionActive {
+      display: none;
+      border-top: 1px solid var(--b1);
+      padding: 8px 14px 10px;
+    }
+    .hc-badge-row {
+      display: flex; justify-content: center; margin-bottom: 7px;
+    }
+    #hardcoreBadge {
+      display: none; align-items: center; gap: 5px;
+      font-family: var(--mono); font-size: 9px; font-weight: 700;
+      letter-spacing: 0.8px; text-transform: uppercase;
+      color: var(--red); background: var(--red-d);
+      border: 1px solid var(--red-m); padding: 3px 10px; border-radius: 100px;
+    }
+    .end-btn {
+      width: 100%; padding: 9px; background: transparent;
+      border: 1px solid rgba(200,25,28,0.25); border-radius: 8px;
+      color: rgba(200,25,28,0.6); font-family: var(--sans);
+      font-size: 11px; font-weight: 500; cursor: pointer;
+      transition: all 0.15s; text-align: center;
+    }
+    .end-btn:hover { background: var(--red-d); border-color: var(--red-m); color: var(--red); }
+    .end-btn.confirming {
+      background: var(--red-d); border-color: rgba(200,25,28,0.5); color: var(--red);
+      box-shadow: 0 0 0 3px rgba(200,25,28,0.1);
+    }
+    .end-btn:active { transform: scale(0.98); }
+
+    /* ── Session idle controls ───────────────────────────────── */
+    #sessionIdle {
+      border-top: 1px solid var(--b1);
+      padding: 12px 14px 14px;
+    }
+    .micro-label {
+      font-family: var(--mono); font-size: 9px; font-weight: 600;
+      letter-spacing: 1.2px; text-transform: uppercase;
+      color: var(--muted); display: block; margin-bottom: 8px;
+    }
+    .dur-row { display: flex; gap: 5px; margin-bottom: 10px; }
+    .dur-btn {
+      flex: 1; padding: 10px 2px; background: var(--s1);
+      border: 1px solid var(--b1); border-radius: 8px;
+      color: var(--text2); font-family: var(--mono);
+      font-size: 12px; font-weight: 600; cursor: pointer;
+      text-align: center; transition: all 0.12s;
+    }
+    .dur-btn:hover { border-color: var(--b2); color: var(--text); background: var(--s2); }
+    .dur-btn.selected { background: #fff; border-color: #fff; color: #000; }
+
+    /* Session preview pill */
+    .session-preview {
+      display: flex; align-items: center; justify-content: center;
+      gap: 8px; margin-bottom: 10px;
+      padding: 7px 12px;
+      background: var(--s1); border: 1px solid var(--b1);
+      border-radius: 8px;
+      font-family: var(--mono); font-size: 11px; color: var(--text2);
+    }
+    .preview-dur {
+      font-weight: 700; color: var(--text); font-size: 12px;
+    }
+    .preview-sep { color: var(--muted); }
+    .preview-mode { color: var(--text2); }
+    .preview-mode.hc { color: var(--red); font-weight: 600; }
+
+    /* Hardcore card */
+    .hc-card {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 12px; margin-bottom: 10px;
+      background: var(--s1); border: 1px solid var(--b1);
+      border-radius: 9px; cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
       gap: 10px;
     }
+    .hc-card.active {
+      background: var(--red-d); border-color: var(--red-m);
+    }
+    .hc-card-left { min-width: 0; }
+    .hc-card-title {
+      font-size: 12px; font-weight: 600; color: var(--text);
+      display: flex; align-items: center; gap: 6px; margin-bottom: 2px;
+    }
+    .hc-card.active .hc-card-title { color: var(--red); }
+    .hc-card-sub {
+      font-size: 10px; color: var(--muted); font-family: var(--mono);
+    }
+    .toggle-sw { position: relative; width: 34px; height: 19px; flex-shrink: 0; }
+    .toggle-sw input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-track {
+      position: absolute; inset: 0; background: var(--b2);
+      border-radius: 19px; cursor: pointer; transition: background 0.2s;
+    }
+    .toggle-track::before {
+      content: ''; position: absolute; left: 3px; top: 3px;
+      width: 13px; height: 13px; background: var(--text2);
+      border-radius: 50%; transition: transform 0.2s, background 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+    .toggle-sw input:checked + .toggle-track { background: var(--red); }
+    .toggle-sw input:checked + .toggle-track::before { transform: translateX(15px); background: #fff; }
 
-    .footer-note {
-      font-size: 10px;
-      color: var(--muted);
-      font-family: var(--mono);
-      flex: 1;
-      min-width: 0;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+    .start-btn {
+      width: 100%; padding: 10px; background: #fff; border: none;
+      border-radius: 8px; color: #000; font-family: var(--sans);
+      font-size: 12px; font-weight: 700; cursor: pointer;
+      transition: background 0.15s, transform 0.1s; letter-spacing: -0.1px;
+    }
+    .start-btn:hover { background: #e8e8e8; }
+    .start-btn:active { transform: scale(0.98); }
+    .start-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Snooze ──────────────────────────────────────────────── */
+    #snoozeRow {
+      display: none; padding: 6px 14px 10px;
+      border-top: 1px solid var(--b1);
+    }
+    .snooze-btn {
+      width: 100%; padding: 9px; background: var(--s1);
+      border: 1px solid var(--b1); border-radius: 8px;
+      color: var(--text2); cursor: pointer; font-family: var(--sans);
+      font-size: 12px; font-weight: 500; transition: all 0.15s;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .snooze-btn:hover { background: var(--s2); border-color: rgba(200,25,28,0.4); color: var(--red); }
+    .snooze-btn:active { transform: scale(0.98); }
+    .snooze-btn.end-snooze {
+      background: var(--red-d); border-color: var(--red-m); color: var(--red);
+    }
+    .snooze-btn.end-snooze:hover {
+      background: rgba(200,25,28,0.12); border-color: rgba(200,25,28,0.45);
     }
 
-    .cf-btn {
-      font-size: 11px;
-      font-family: var(--sans);
-      font-weight: 500;
-      background: var(--brand-dim);
-      color: #a5b4fc;
-      border: 1px solid rgba(99, 102, 241, 0.25);
-      border-radius: 6px;
-      padding: 5px 10px;
-      cursor: pointer;
-      transition: all 0.15s;
-      text-decoration: none;
-      white-space: nowrap;
-      flex-shrink: 0;
+    /* ── Ring animations ─────────────────────────────────────── */
+    #ringIdleArc {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: ring-spin 4s linear infinite;
+      transition: opacity 0.5s ease;
     }
-    .cf-btn:hover {
-      background: rgba(99, 102, 241, 0.2);
-      border-color: rgba(99, 102, 241, 0.4);
-      color: #c7d2fe;
+    #ringProgress {
+      opacity: 0;
+      transition: opacity 0.5s ease;
     }
-    .cf-btn:active { transform: scale(0.97); }
+    @keyframes ring-spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+
+    /* ── Footer ──────────────────────────────────────────────── */
+    .footer {
+      padding: 7px 14px 10px;
+      border-top: 1px solid var(--b1);
+      display: flex; align-items: center;
+      justify-content: space-between; gap: 10px;
+    }
+    #footerNote {
+      font-size: 10px; color: var(--muted); font-family: var(--mono);
+      flex: 1; min-width: 0;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .cf-link {
+      font-size: 11px; font-family: var(--sans); font-weight: 600;
+      background: rgba(255,255,255,0.07); color: var(--text);
+      border: 1px solid rgba(255,255,255,0.12); border-radius: 6px;
+      padding: 5px 10px; cursor: pointer; transition: all 0.15s;
+      text-decoration: none; white-space: nowrap; flex-shrink: 0;
+    }
+    .cf-link:hover {
+      background: rgba(255,255,255,0.13); border-color: rgba(255,255,255,0.25); color: #fff;
+    }
+    .cf-link:active { transform: scale(0.97); }
   </style>
 </head>
 <body>
+
+  <!-- Header -->
   <div class="header">
     <div class="logo">CF</div>
-    <div class="header-info">
-      <h1>CF Focus</h1>
-      <p>Competitive Programming</p>
-    </div>
-    <button class="settings-btn" id="settingsBtn" title="Settings">
+    <span class="header-title">CF Focus</span>
+    <button class="icon-btn" id="settingsBtn" title="Settings">
       <svg width="13" height="13" viewBox="0 0 20 20" fill="none">
         <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" stroke="currentColor" stroke-width="1.5"/>
         <path d="M17.3 8.3 16 7.6l.5-1.5-2.2-1.3-1 1.2-1.4-.4-.5-1.6H9l-.5 1.6-1.4.4-1-1.2L3.9 6.1l.5 1.5-1.3.7v2.4l1.3.7-.5 1.5L6 14.2l1-1.2 1.4.4.5 1.6h2.4l.5-1.6 1.4-.4 1 1.2 2.2-1.3-.5-1.5 1.3-.7V8.3Z" stroke="currentColor" stroke-width="1.3"/>
@@ -345,23 +328,105 @@
     </button>
   </div>
 
-  <div class="status-wrap">
-    <div class="status-card" id="statusCard">
-      <div class="status-header">
-        <span class="status-label">Focus Status</span>
-        <div class="status-pill" id="statusState">
-          <div class="status-dot"></div>
-          <span id="statusStateText">—</span>
-        </div>
-      </div>
-      <div class="status-body">
-        <div class="status-main" id="statusMain">Loading…</div>
-        <div class="status-sub" id="statusSub">checking open tabs</div>
+  <!-- Hero: status pill + ring (always visible) + status text -->
+  <div id="statusCard" class="status-card">
+    <div class="hero-pill-row">
+      <div class="status-pill inactive" id="statusState">
+        <div class="pill-dot"></div>
+        <span id="statusStateText">All clear</span>
       </div>
     </div>
+
+    <!-- Ring: idle = spinning white arc (clock), active = red depleting -->
+    <div class="ring-wrap">
+      <svg width="190" height="190" viewBox="0 0 200 200">
+        <!-- Track -->
+        <circle cx="100" cy="100" r="82" fill="none" stroke="#151515" stroke-width="11"/>
+        <!-- Idle spinning arc (white sweep, always rotating) -->
+        <circle
+          id="ringIdleArc"
+          cx="100" cy="100" r="82"
+          fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="11"
+          stroke-dasharray="100 415.22"
+          stroke-linecap="round"
+        />
+        <!-- Progress (red, depleting countdown — hidden until session) -->
+        <circle
+          id="ringProgress"
+          cx="100" cy="100" r="82"
+          fill="none" stroke="#c8191c" stroke-width="11"
+          stroke-dasharray="515.22" stroke-dashoffset="515.22"
+          stroke-linecap="round" transform="rotate(-90 100 100)"
+        />
+        <!-- Center text (clock time when idle, countdown when session) -->
+        <text
+          id="ringTimerText"
+          x="100" y="97" text-anchor="middle"
+          font-family="'JetBrains Mono', monospace"
+          font-size="40" font-weight="700" fill="#2e2e2e"
+        >—:—</text>
+        <!-- Sub-label -->
+        <text
+          id="ringLabel"
+          x="100" y="118" text-anchor="middle"
+          font-family="'Inter', sans-serif"
+          font-size="11" fill="#3a3a3a"
+        >focus watch</text>
+      </svg>
+    </div>
+
+    <div class="status-main inactive" id="statusMain">All clear</div>
+    <div class="status-sub" id="statusSub">no focus tabs detected</div>
   </div>
 
-  <div class="snooze-wrap" id="snoozeRow" style="display:none">
+  <!-- Session active controls -->
+  <div id="sessionActive">
+    <div class="hc-badge-row">
+      <div id="hardcoreBadge">&#x2B25; HARDCORE</div>
+    </div>
+    <button class="end-btn" id="endSessionBtn">End Session</button>
+  </div>
+
+  <!-- Session idle: start controls -->
+  <div id="sessionIdle">
+    <span class="micro-label">Duration</span>
+    <div class="dur-row" id="durRow">
+      <button class="dur-btn" data-dur="25">25m</button>
+      <button class="dur-btn selected" data-dur="45">45m</button>
+      <button class="dur-btn" data-dur="60">60m</button>
+      <button class="dur-btn" data-dur="90">90m</button>
+    </div>
+
+    <!-- Live preview of the session about to start -->
+    <div class="session-preview">
+      <span class="preview-dur" id="previewDur">45 min</span>
+      <span class="preview-sep">&middot;</span>
+      <span class="preview-mode" id="previewMode">Standard</span>
+    </div>
+
+    <!-- Hardcore card — click anywhere to toggle -->
+    <div class="hc-card" id="hcCard">
+      <div class="hc-card-left">
+        <div class="hc-card-title">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
+            <path d="M8 1.5C8 1.5 4 5 4 9a4 4 0 0 0 8 0c0-4-4-7.5-4-7.5Z"
+              stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+          </svg>
+          Hardcore Mode
+        </div>
+        <div class="hc-card-sub">No snooze &middot; no early exit &middot; full lock</div>
+      </div>
+      <label class="toggle-sw" onclick="event.stopPropagation()">
+        <input type="checkbox" id="hardcoreToggle">
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+
+    <button class="start-btn" id="startSessionBtn">Start Focus Session</button>
+  </div>
+
+  <!-- Snooze row -->
+  <div id="snoozeRow">
     <button class="snooze-btn" id="snoozeBtn">
       <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
         <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/>
@@ -371,26 +436,10 @@
     </button>
   </div>
 
-  <div class="stats-wrap">
-    <div class="stats-row">
-      <div class="stat">
-        <div class="stat-val" id="streakVal">—</div>
-        <div class="stat-label">Streak</div>
-      </div>
-      <div class="stat">
-        <div class="stat-val" id="sessionsVal">—</div>
-        <div class="stat-label">Sessions</div>
-      </div>
-      <div class="stat">
-        <div class="stat-val" id="minutesVal">—</div>
-        <div class="stat-label">Minutes</div>
-      </div>
-    </div>
-  </div>
-
+  <!-- Footer -->
   <div class="footer">
-    <span class="footer-note" id="footerNote">open a focus platform to activate</span>
-    <a class="cf-btn" href="https://codeforces.com" target="_blank">Open CF →</a>
+    <span id="footerNote">open a focus platform to activate</span>
+    <a class="cf-link" href="https://codeforces.com" target="_blank">CF &rarr;</a>
   </div>
 
   <script src="popup.js"></script>
