@@ -10,7 +10,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const sessionsVal = document.getElementById('sessionsVal');
   const minutesVal  = document.getElementById('minutesVal');
 
+  const statusState     = document.getElementById('statusState');
+  const statusStateText = document.getElementById('statusStateText');
   let state = null;
+
+  function setSnoozeBtn(html) {
+    // Preserve the clock SVG icon inside the button
+    const svg = snoozeBtn.querySelector('svg');
+    snoozeBtn.innerHTML = '';
+    if (svg) snoozeBtn.appendChild(svg);
+    snoozeBtn.appendChild(document.createTextNode(' ' + html));
+  }
 
   function render() {
     if (!state) return;
@@ -21,45 +31,48 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (isSnoozed) {
       const remaining = Math.ceil((settings.snoozeUntil - now) / 60000);
-      statusCard.className = 'status-card snoozed';
-      statusDot.className  = 'status-dot snoozed';
-      statusMain.className = 'status-main snoozed';
-      statusMain.textContent = '⏸ Snoozed';
-      statusSub.textContent  = `${remaining} min remaining`;
-      footerNote.textContent = 'AI blocking paused';
-      snoozeRow.style.display = 'flex';
-      snoozeBtn.textContent = 'End Snooze';
-      snoozeBtn.className = 'snooze-btn end-snooze';
+      statusCard.className    = 'status-card snoozed';
+      statusMain.className    = 'status-main snoozed';
+      statusState.className   = 'status-pill snoozed';
+      statusStateText.textContent = 'Snoozed';
+      statusMain.textContent  = 'Snoozed';
+      statusSub.textContent   = `${remaining} min remaining`;
+      footerNote.textContent  = 'AI blocking paused';
+      snoozeRow.style.display = 'block';
+      snoozeBtn.className     = 'snooze-btn end-snooze';
+      setSnoozeBtn('End Snooze');
       snoozeBtn.dataset.action = 'unsnooze';
     } else if (isBlocking) {
-      statusCard.className = 'status-card active';
-      statusDot.className  = 'status-dot active';
-      statusMain.className = 'status-main active';
-      statusMain.textContent = '🔒 AI Blocked';
+      statusCard.className    = 'status-card active';
+      statusMain.className    = 'status-main active';
+      statusState.className   = 'status-pill active';
+      statusStateText.textContent = 'Blocking';
+      statusMain.textContent  = 'Focus Mode On';
       const count = focusTabCount || 0;
-      statusSub.textContent  = `${count} focus tab${count !== 1 ? 's' : ''} open`;
-      footerNote.textContent = 'close focus tab to deactivate';
-      snoozeRow.style.display = 'flex';
+      statusSub.textContent   = `${count} focus tab${count !== 1 ? 's' : ''} open`;
+      footerNote.textContent  = 'close focus tab to deactivate';
+      snoozeRow.style.display = 'block';
       const dur = settings.snoozeDuration || 15;
-      snoozeBtn.textContent = `Snooze ${dur}m`;
-      snoozeBtn.className = 'snooze-btn';
+      snoozeBtn.className     = 'snooze-btn';
+      setSnoozeBtn(`Snooze ${dur}m`);
       snoozeBtn.dataset.action = 'snooze';
     } else {
-      statusCard.className = 'status-card inactive';
-      statusDot.className  = 'status-dot inactive';
-      statusMain.className = 'status-main inactive';
-      statusMain.textContent = '✓ All clear';
-      statusSub.textContent  = 'no focus tabs detected';
-      footerNote.textContent = 'open a focus platform to activate';
+      statusCard.className    = 'status-card inactive';
+      statusMain.className    = 'status-main inactive';
+      statusState.className   = 'status-pill inactive';
+      statusStateText.textContent = 'All clear';
+      statusMain.textContent  = 'All clear';
+      statusSub.textContent   = 'no focus tabs detected';
+      footerNote.textContent  = 'open a focus platform to activate';
       snoozeRow.style.display = 'none';
     }
 
     // Stats
     const streak = local.currentStreak || 0;
-    streakVal.textContent = streak > 0 ? `🔥${streak}d` : '0d';
+    streakVal.textContent = streak > 0 ? `${streak}d` : '—';
     streakVal.className = streak > 0 ? 'stat-val highlight' : 'stat-val';
-    sessionsVal.textContent = local.totalSessions || 0;
-    minutesVal.textContent  = local.totalMinutes  || 0;
+    sessionsVal.textContent = local.totalSessions || '—';
+    minutesVal.textContent  = local.totalMinutes  || '—';
   }
 
   function loadState() {

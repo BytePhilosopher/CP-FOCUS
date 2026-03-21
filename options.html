@@ -5,25 +5,29 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CF Focus — Settings</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #0d0f14;
-      --surface: #161a22;
-      --surface2: #1e2330;
-      --border: #2a2f3d;
-      --accent: #e53e3e;
-      --accent-dim: rgba(229,62,62,0.12);
-      --green: #48bb78;
-      --green-dim: rgba(72,187,120,0.1);
-      --amber: #ed8936;
-      --blue: #63b3ed;
-      --text: #e8eaf0;
-      --muted: #6b7280;
-      --mono: 'JetBrains Mono', monospace;
-      --sans: 'Space Grotesk', sans-serif;
+      --bg:         #0d1117;
+      --surface:    #161b27;
+      --surface2:   #1c2333;
+      --border:     #21293d;
+      --border2:    #2a3652;
+      --brand:      #6366f1;
+      --brand-dim:  rgba(99, 102, 241, 0.1);
+      --red:        #f43f5e;
+      --red-dim:    rgba(244, 63, 94, 0.1);
+      --green:      #10b981;
+      --green-dim:  rgba(16, 185, 129, 0.1);
+      --amber:      #f59e0b;
+      --blue:       #60a5fa;
+      --text:       #e6edf3;
+      --text2:      #7d8590;
+      --muted:      #3d4a5c;
+      --mono:       'JetBrains Mono', monospace;
+      --sans:       'Inter', sans-serif;
     }
 
     body {
@@ -32,111 +36,193 @@
       font-family: var(--sans);
       font-size: 13px;
       min-height: 100vh;
-      padding-bottom: 60px;
+      padding-bottom: 80px;
     }
 
     /* ── PIN Modal ── */
     #pinModal {
       position: fixed;
       inset: 0;
-      background: rgba(13,15,20,0.95);
+      background: rgba(13, 17, 23, 0.88);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 100;
     }
     #pinModal.hidden { display: none; }
+
     .pin-box {
       background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 32px;
+      border: 1px solid var(--border2);
+      border-radius: 16px;
+      padding: 36px 32px;
       text-align: center;
-      width: 300px;
+      width: 320px;
+      box-shadow: 0 24px 48px rgba(0,0,0,0.5);
     }
-    .pin-box h2 { font-size: 18px; margin-bottom: 8px; }
-    .pin-box p  { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+
+    .pin-box-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--brand-dim);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      border-radius: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 18px;
+      color: #a5b4fc;
+    }
+
+    .pin-box h2 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+    }
+    .pin-box-desc {
+      font-size: 13px;
+      color: var(--text2);
+      margin-bottom: 28px;
+      line-height: 1.5;
+    }
+
     .pin-input {
       width: 100%;
       background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 9px;
       color: var(--text);
       font-family: var(--mono);
-      font-size: 18px;
-      letter-spacing: 4px;
-      padding: 10px;
+      font-size: 22px;
+      letter-spacing: 8px;
+      padding: 13px;
       text-align: center;
       outline: none;
-      margin-bottom: 14px;
+      margin-bottom: 12px;
+      transition: border-color 0.15s;
     }
-    .pin-input:focus { border-color: var(--accent); }
-    .pin-error { color: #fc8181; font-size: 11px; min-height: 16px; margin-bottom: 12px; }
+    .pin-input:focus { border-color: var(--brand); }
+    .pin-input::placeholder { letter-spacing: 4px; font-size: 16px; }
+
+    .pin-error {
+      color: #fb7185;
+      font-size: 11px;
+      min-height: 18px;
+      margin-bottom: 14px;
+      font-family: var(--mono);
+    }
+
     .btn-primary {
       width: 100%;
-      background: var(--accent);
+      background: var(--brand);
       border: none;
-      border-radius: 8px;
+      border-radius: 9px;
       color: white;
       cursor: pointer;
       font-family: var(--sans);
       font-size: 13px;
       font-weight: 600;
-      padding: 10px;
-      transition: opacity 0.2s;
+      padding: 12px;
+      transition: background 0.15s, transform 0.1s;
+      letter-spacing: -0.1px;
     }
-    .btn-primary:hover { opacity: 0.85; }
+    .btn-primary:hover { background: #4f52e0; }
+    .btn-primary:active { transform: scale(0.98); }
 
     /* ── Page layout ── */
     .page-header {
-      max-width: 640px;
+      max-width: 660px;
       margin: 0 auto;
-      padding: 28px 24px 20px;
+      padding: 28px 28px 24px;
       border-bottom: 1px solid var(--border);
       display: flex;
       align-items: center;
       gap: 14px;
     }
+
     .page-logo {
-      width: 38px; height: 38px;
-      background: var(--accent);
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-family: var(--mono); font-weight: 700; font-size: 15px; color: white;
-    }
-    .page-header h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.5px; }
-    .page-header p  { font-size: 12px; color: var(--muted); margin-top: 2px; }
-
-    .content { max-width: 640px; margin: 0 auto; padding: 0 24px; }
-
-    /* ── Section ── */
-    .section {
-      margin-top: 28px;
-    }
-    .section-title {
-      font-family: var(--mono);
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 12px;
+      width: 42px;
+      height: 42px;
+      background: var(--brand);
+      border-radius: 12px;
       display: flex;
       align-items: center;
-      gap: 8px;
+      justify-content: center;
+      font-family: var(--mono);
+      font-weight: 700;
+      font-size: 16px;
+      color: white;
+      flex-shrink: 0;
+      letter-spacing: -0.5px;
+      box-shadow: 0 0 0 1px rgba(99,102,241,0.4), 0 4px 12px rgba(99,102,241,0.2);
     }
-    .section-title::after {
-      content: '';
+
+    .page-header-text { flex: 1; }
+    .page-header-text h1 {
+      font-size: 19px;
+      font-weight: 700;
+      letter-spacing: -0.6px;
+    }
+    .page-header-text p {
+      font-size: 12px;
+      color: var(--text2);
+      margin-top: 3px;
+    }
+
+    .version-tag {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 500;
+      color: #a5b4fc;
+      background: var(--brand-dim);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      border-radius: 100px;
+      padding: 3px 10px;
+    }
+
+    .content {
+      max-width: 660px;
+      margin: 0 auto;
+      padding: 0 28px;
+    }
+
+    /* ── Section ── */
+    .section { margin-top: 36px; }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .section-title-text {
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .section-title-line {
       flex: 1;
       height: 1px;
       background: var(--border);
     }
+
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 12px;
       overflow: hidden;
+      transition: border-color 0.15s;
     }
+    .card:focus-within { border-color: var(--border2); }
 
     /* ── Toggle grid ── */
     .toggle-grid {
@@ -145,25 +231,39 @@
       gap: 1px;
       background: var(--border);
     }
+
     .toggle-item {
       background: var(--surface);
-      padding: 12px 14px;
+      padding: 13px 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       cursor: pointer;
-      transition: background 0.15s;
+      transition: background 0.12s;
+      gap: 12px;
     }
     .toggle-item:hover { background: var(--surface2); }
-    .toggle-item-name { font-size: 13px; font-weight: 500; }
-    .toggle-item-sub  { font-size: 10px; color: var(--muted); margin-top: 1px; font-family: var(--mono); }
 
-    /* CSS toggle switch */
+    .toggle-item-info { min-width: 0; flex: 1; }
+    .toggle-item-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+    }
+    .toggle-item-sub {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 2px;
+      font-family: var(--mono);
+    }
+
+    /* Toggle switch */
     .toggle-switch { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
     .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
     .toggle-track {
-      position: absolute; inset: 0;
-      background: var(--border);
+      position: absolute;
+      inset: 0;
+      background: var(--border2);
       border-radius: 20px;
       cursor: pointer;
       transition: background 0.2s;
@@ -171,67 +271,125 @@
     .toggle-track::before {
       content: '';
       position: absolute;
-      left: 3px; top: 3px;
-      width: 14px; height: 14px;
-      background: white;
+      left: 3px;
+      top: 3px;
+      width: 14px;
+      height: 14px;
+      background: var(--text2);
       border-radius: 50%;
-      transition: transform 0.2s;
+      transition: transform 0.2s ease, background 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
     }
     .toggle-switch input:checked + .toggle-track { background: var(--green); }
-    .toggle-switch input:checked + .toggle-track::before { transform: translateX(16px); }
+    .toggle-switch input:checked + .toggle-track::before {
+      transform: translateX(16px);
+      background: white;
+    }
 
-    /* ── Sites list (default blocked) ── */
-    .sites-list { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); }
+    /* ── Sites list ── */
+    .sites-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--border);
+    }
+
     .site-item {
       background: var(--surface);
-      padding: 10px 14px;
+      padding: 9px 16px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: 10px;
       cursor: pointer;
+      transition: background 0.12s;
     }
     .site-item:hover { background: var(--surface2); }
-    .site-name { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+    .site-check {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+      accent-color: var(--brand);
+      cursor: pointer;
+    }
+
+    .site-name {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      transition: color 0.15s;
+      flex: 1;
+    }
+    .site-item:hover .site-name { color: var(--text2); }
     .site-item input:checked ~ .site-name { color: var(--text); }
 
     /* ── Custom blocklist ── */
+    .custom-section {
+      border-top: 1px solid var(--border);
+      padding: 14px 16px 0;
+    }
+
+    .custom-label {
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 10px;
+    }
+
     .add-row {
-      padding: 12px 14px;
       display: flex;
       gap: 8px;
+      padding-bottom: 14px;
       border-bottom: 1px solid var(--border);
     }
+
     .text-input {
       flex: 1;
       background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: 7px;
+      border-radius: 8px;
       color: var(--text);
       font-family: var(--mono);
       font-size: 12px;
-      padding: 7px 10px;
+      padding: 9px 11px;
       outline: none;
-      transition: border-color 0.2s;
+      transition: border-color 0.15s;
     }
-    .text-input:focus { border-color: var(--blue); }
+    .text-input:focus { border-color: var(--brand); }
     .text-input::placeholder { color: var(--muted); }
+
     .btn-add {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 7px;
-      color: var(--text);
+      background: var(--brand-dim);
+      border: 1px solid rgba(99, 102, 241, 0.25);
+      border-radius: 8px;
+      color: #a5b4fc;
       cursor: pointer;
       font-family: var(--sans);
       font-size: 12px;
       font-weight: 500;
-      padding: 7px 14px;
-      transition: border-color 0.2s, color 0.2s;
+      padding: 9px 16px;
+      transition: all 0.15s;
       white-space: nowrap;
     }
-    .btn-add:hover { border-color: var(--blue); color: var(--blue); }
+    .btn-add:hover {
+      background: rgba(99, 102, 241, 0.18);
+      border-color: rgba(99, 102, 241, 0.4);
+      color: #c7d2fe;
+    }
+    .btn-add:active { transform: scale(0.97); }
 
-    .custom-list { padding: 6px 14px 10px; min-height: 36px; }
-    .custom-empty { font-family: var(--mono); font-size: 11px; color: var(--muted); padding: 8px 0; }
+    .custom-list { padding: 10px 0 2px; min-height: 32px; }
+
+    .custom-empty {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
     .custom-tag {
       display: inline-flex;
       align-items: center;
@@ -243,121 +401,227 @@
       font-family: var(--mono);
       font-size: 11px;
       color: var(--text);
-      margin: 4px 4px 0 0;
+      margin: 0 6px 6px 0;
+      transition: border-color 0.15s;
     }
+    .custom-tag:hover { border-color: var(--border2); }
+
     .custom-tag button {
       background: none;
       border: none;
       color: var(--muted);
       cursor: pointer;
-      font-size: 13px;
+      font-size: 15px;
       line-height: 1;
       padding: 0;
-      transition: color 0.15s;
+      display: flex;
+      align-items: center;
+      transition: color 0.12s;
     }
-    .custom-tag button:hover { color: var(--accent); }
+    .custom-tag button:hover { color: #fb7185; }
 
-    /* ── Snooze duration ── */
+    /* ── Row setting ── */
     .row-setting {
-      padding: 12px 14px;
+      padding: 15px 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 20px;
+      transition: background 0.12s;
     }
+    .row-setting:hover { background: var(--surface2); }
     .row-setting + .row-setting { border-top: 1px solid var(--border); }
-    .row-label { font-size: 13px; font-weight: 500; }
-    .row-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .row-setting-no-hover:hover { background: transparent; }
+
+    .row-left { min-width: 0; flex: 1; }
+    .row-label { font-size: 13px; font-weight: 500; color: var(--text); }
+    .row-sub {
+      font-size: 11px;
+      color: var(--text2);
+      margin-top: 3px;
+      line-height: 1.5;
+    }
+
     .select-input {
       background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: 7px;
+      border-radius: 8px;
       color: var(--text);
       font-family: var(--mono);
       font-size: 12px;
-      padding: 6px 10px;
+      padding: 7px 11px;
       outline: none;
       cursor: pointer;
-      transition: border-color 0.2s;
+      transition: border-color 0.15s;
+      flex-shrink: 0;
     }
-    .select-input:focus { border-color: var(--blue); }
+    .select-input:focus { border-color: var(--brand); }
+
+    /* Shortcut row */
+    .shortcut-row {
+      padding: 11px 16px 13px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--text2);
+    }
+
+    .kbd {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 5px;
+      padding: 2px 7px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text);
+    }
 
     /* ── Schedule ── */
-    .schedule-body { padding: 14px; }
+    .schedule-body {
+      padding: 16px;
+      border-top: 1px solid var(--border);
+      background: rgba(99,102,241,0.02);
+    }
+
+    .schedule-row-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text2);
+      margin-bottom: 10px;
+    }
+
     .day-grid {
       display: flex;
       gap: 6px;
       flex-wrap: wrap;
-      margin-bottom: 14px;
+      margin-bottom: 18px;
     }
+
     .day-chip {
-      width: 36px; height: 36px;
-      display: flex; align-items: center; justify-content: center;
-      border-radius: 8px;
+      width: 38px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 9px;
       border: 1px solid var(--border);
       background: var(--surface2);
       font-family: var(--mono);
       font-size: 11px;
+      font-weight: 500;
       color: var(--muted);
       cursor: pointer;
       transition: all 0.15s;
       user-select: none;
     }
-    .day-chip.selected { background: var(--accent-dim); border-color: rgba(229,62,62,0.4); color: #fc8181; }
-    .hour-row { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
+    .day-chip:hover { border-color: var(--border2); color: var(--text2); }
+    .day-chip.selected {
+      background: var(--brand-dim);
+      border-color: rgba(99, 102, 241, 0.35);
+      color: #a5b4fc;
+    }
+
+    .hour-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--text2);
+    }
+
     .hour-input {
       width: 64px;
       background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: 7px;
+      border-radius: 8px;
       color: var(--text);
       font-family: var(--mono);
       font-size: 13px;
-      padding: 6px 8px;
+      padding: 7px 8px;
       outline: none;
       text-align: center;
-      transition: border-color 0.2s;
+      transition: border-color 0.15s;
     }
-    .hour-input:focus { border-color: var(--blue); }
+    .hour-input:focus { border-color: var(--brand); }
 
-    /* ── PIN ── */
-    .pin-section { padding: 14px; }
-    .pin-status  { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-bottom: 12px; }
+    /* ── PIN section ── */
+    .pin-section { padding: 16px; }
+
+    .pin-status {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
     .pin-status.set { color: var(--green); }
-    .pin-form { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
-    .pin-field { display: flex; flex-direction: column; gap: 4px; }
-    .pin-field label { font-size: 11px; color: var(--muted); }
+    .pin-status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      flex-shrink: 0;
+    }
+
+    .pin-form {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .pin-field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .pin-field label {
+      font-size: 10px;
+      color: var(--text2);
+      font-family: var(--mono);
+      letter-spacing: 0.3px;
+    }
+
     .pin-input-sm {
-      width: 110px;
+      width: 112px;
       background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: 7px;
+      border-radius: 8px;
       color: var(--text);
       font-family: var(--mono);
-      font-size: 14px;
-      letter-spacing: 3px;
-      padding: 7px 10px;
+      font-size: 16px;
+      letter-spacing: 5px;
+      padding: 9px 10px;
       outline: none;
       text-align: center;
-      transition: border-color 0.2s;
+      transition: border-color 0.15s;
     }
-    .pin-input-sm:focus { border-color: var(--blue); }
+    .pin-input-sm:focus { border-color: var(--brand); }
+
     .btn-sm {
       background: var(--surface2);
       border: 1px solid var(--border);
-      border-radius: 7px;
-      color: var(--text);
+      border-radius: 8px;
+      color: var(--text2);
       cursor: pointer;
       font-family: var(--sans);
       font-size: 12px;
       font-weight: 500;
-      padding: 8px 14px;
-      transition: all 0.2s;
+      padding: 9px 16px;
+      transition: all 0.15s;
+      white-space: nowrap;
     }
-    .btn-sm:hover { border-color: var(--blue); color: var(--blue); }
-    .btn-sm.danger:hover { border-color: var(--accent); color: #fc8181; }
-    .pin-msg { font-size: 11px; min-height: 16px; margin-top: 8px; }
+    .btn-sm:hover { border-color: var(--border2); color: var(--text); background: var(--surface2); }
+    .btn-sm:active { transform: scale(0.97); }
+    .btn-sm.danger:hover { border-color: rgba(244, 63, 94, 0.4); color: #fb7185; }
+
+    .pin-msg { font-size: 11px; min-height: 18px; margin-top: 10px; font-family: var(--mono); }
     .pin-msg.ok  { color: var(--green); }
-    .pin-msg.err { color: #fc8181; }
+    .pin-msg.err { color: #fb7185; }
 
     /* ── Stats ── */
     .stats-grid {
@@ -366,16 +630,42 @@
       gap: 1px;
       background: var(--border);
     }
-    .stat-box { background: var(--surface); padding: 14px 10px; text-align: center; }
-    .stat-big  { font-family: var(--mono); font-size: 20px; font-weight: 600; color: var(--text); }
+
+    .stat-box {
+      background: var(--surface);
+      padding: 18px 10px 16px;
+      text-align: center;
+      transition: background 0.12s;
+      cursor: default;
+    }
+    .stat-box:hover { background: var(--surface2); }
+
+    .stat-big {
+      font-family: var(--mono);
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -1px;
+      line-height: 1;
+    }
     .stat-big.orange { color: var(--amber); }
-    .stat-lbl  { font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+    .stat-lbl {
+      font-size: 9px;
+      color: var(--muted);
+      margin-top: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-family: var(--mono);
+    }
+
     .stats-footer {
-      padding: 10px 14px;
+      padding: 12px 16px;
       border-top: 1px solid var(--border);
       display: flex;
       justify-content: flex-end;
     }
+
     .btn-ghost {
       background: none;
       border: 1px solid var(--border);
@@ -384,27 +674,52 @@
       cursor: pointer;
       font-family: var(--sans);
       font-size: 11px;
-      padding: 5px 12px;
-      transition: all 0.2s;
+      font-weight: 500;
+      padding: 6px 14px;
+      transition: all 0.15s;
     }
-    .btn-ghost:hover { border-color: var(--accent); color: #fc8181; }
+    .btn-ghost:hover {
+      border-color: rgba(244, 63, 94, 0.35);
+      color: #fb7185;
+    }
+    .btn-ghost:active { transform: scale(0.97); }
 
     /* ── Save indicator ── */
     #saveIndicator {
       position: fixed;
-      bottom: 20px;
-      right: 24px;
+      bottom: 24px;
+      right: 28px;
       background: var(--surface);
-      border: 1px solid var(--green);
-      border-radius: 8px;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      border-radius: 9px;
       color: var(--green);
       font-family: var(--mono);
       font-size: 11px;
-      padding: 7px 14px;
+      font-weight: 500;
+      padding: 9px 16px;
       opacity: 0;
-      transition: opacity 0.3s;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      transform: translateY(6px);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      pointer-events: none;
     }
-    #saveIndicator.show { opacity: 1; }
+    #saveIndicator.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .save-check {
+      width: 16px;
+      height: 16px;
+      background: rgba(16, 185, 129, 0.15);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
   </style>
 </head>
 <body>
@@ -412,9 +727,17 @@
   <!-- PIN lock modal -->
   <div id="pinModal" class="hidden">
     <div class="pin-box">
-      <h2>🔒 PIN Required</h2>
-      <p>Enter your PIN to access settings</p>
-      <input type="password" class="pin-input" id="pinModalInput" maxlength="8" placeholder="••••" inputmode="numeric">
+      <div class="pin-box-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="11" width="18" height="12" rx="3" stroke="currentColor" stroke-width="1.6"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          <circle cx="12" cy="16.5" r="1.5" fill="currentColor"/>
+          <line x1="12" y1="18" x2="12" y2="20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h2>Settings locked</h2>
+      <p class="pin-box-desc">Enter your PIN to access settings</p>
+      <input type="password" class="pin-input" id="pinModalInput" maxlength="8" placeholder="·  ·  ·  ·" inputmode="numeric">
       <div class="pin-error" id="pinModalError"></div>
       <button class="btn-primary" id="pinModalSubmit">Unlock</button>
     </div>
@@ -423,17 +746,21 @@
   <div id="mainContent">
     <div class="page-header">
       <div class="page-logo">CF</div>
-      <div>
-        <h1>CF Focus Settings</h1>
-        <p>v2.0 — AI Blocker for Competitive Programming</p>
+      <div class="page-header-text">
+        <h1>CF Focus</h1>
+        <p>AI Blocker for Competitive Programming</p>
       </div>
+      <span class="version-tag">v2.0</span>
     </div>
 
     <div class="content">
 
       <!-- ── PLATFORMS ── -->
       <div class="section">
-        <div class="section-title">Focus Platforms</div>
+        <div class="section-title">
+          <span class="section-title-text">Focus Platforms</span>
+          <div class="section-title-line"></div>
+        </div>
         <div class="card">
           <div class="toggle-grid" id="platformGrid"></div>
         </div>
@@ -441,14 +768,17 @@
 
       <!-- ── BLOCKED SITES ── -->
       <div class="section">
-        <div class="section-title">Blocked AI Sites</div>
+        <div class="section-title">
+          <span class="section-title-text">Blocked AI Sites</span>
+          <div class="section-title-line"></div>
+        </div>
         <div class="card">
           <div class="sites-list" id="defaultSites"></div>
-          <div style="border-top:1px solid var(--border); padding: 10px 14px;">
-            <div style="font-size:11px; color:var(--muted); margin-bottom:8px; font-family:var(--mono);">CUSTOM SITES</div>
-            <div class="add-row" style="padding:0 0 10px 0; border-bottom: 1px solid var(--border);">
+          <div class="custom-section">
+            <span class="custom-label">Custom Sites</span>
+            <div class="add-row">
               <input class="text-input" id="customInput" type="text" placeholder="e.g. khanacademy.org">
-              <button class="btn-add" id="customAddBtn">Add</button>
+              <button class="btn-add" id="customAddBtn">Add site</button>
             </div>
             <div class="custom-list" id="customList"></div>
           </div>
@@ -457,10 +787,13 @@
 
       <!-- ── SNOOZE ── -->
       <div class="section">
-        <div class="section-title">Snooze</div>
+        <div class="section-title">
+          <span class="section-title-text">Snooze</span>
+          <div class="section-title-line"></div>
+        </div>
         <div class="card">
           <div class="row-setting">
-            <div>
+            <div class="row-left">
               <div class="row-label">Default snooze duration</div>
               <div class="row-sub">How long to pause blocking when you snooze</div>
             </div>
@@ -472,33 +805,44 @@
               <option value="120">2 hours</option>
             </select>
           </div>
-          <div class="row-setting" style="border-top:1px solid var(--border); padding-top:10px; padding-bottom:10px;">
-            <div style="font-size:11px; color:var(--muted); font-family:var(--mono);">Keyboard shortcut: <strong style="color:var(--text)">Ctrl+Shift+B</strong> (Mac: ⌘⇧B) — toggle snooze</div>
+          <div class="shortcut-row">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+              <rect x="1.5" y="4.5" width="13" height="9" rx="2" stroke="currentColor" stroke-width="1.2"/>
+              <path d="M5 1.5v3M8 1.5v3M11 1.5v3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+            <span>
+              Toggle snooze with <span class="kbd">Ctrl+Shift+B</span>
+              &nbsp;·&nbsp;
+              Mac: <span class="kbd">⌘⇧B</span>
+            </span>
           </div>
         </div>
       </div>
 
       <!-- ── SCHEDULE ── -->
       <div class="section">
-        <div class="section-title">Scheduled Blocking</div>
+        <div class="section-title">
+          <span class="section-title-text">Scheduled Blocking</span>
+          <div class="section-title-line"></div>
+        </div>
         <div class="card">
           <div class="row-setting">
-            <div>
+            <div class="row-left">
               <div class="row-label">Enable schedule</div>
-              <div class="row-sub">Block AI during set hours regardless of tabs</div>
+              <div class="row-sub">Block AI during set hours regardless of open tabs</div>
             </div>
             <label class="toggle-switch">
               <input type="checkbox" id="scheduleEnabled">
               <span class="toggle-track"></span>
             </label>
           </div>
-          <div class="schedule-body" id="scheduleBody" style="border-top:1px solid var(--border);">
-            <div style="font-size:11px; color:var(--muted); margin-bottom:8px;">Active days</div>
+          <div class="schedule-body" id="scheduleBody">
+            <div class="schedule-row-label">Active days</div>
             <div class="day-grid" id="dayGrid"></div>
             <div class="hour-row">
               <span>From</span>
               <input class="hour-input" id="startHour" type="number" min="0" max="23" value="9">
-              <span>:00 to</span>
+              <span>:00 &nbsp;to</span>
               <input class="hour-input" id="endHour" type="number" min="0" max="23" value="21">
               <span>:00</span>
             </div>
@@ -508,21 +852,27 @@
 
       <!-- ── PIN ── -->
       <div class="section">
-        <div class="section-title">PIN Lock</div>
+        <div class="section-title">
+          <span class="section-title-text">PIN Lock</span>
+          <div class="section-title-line"></div>
+        </div>
         <div class="card">
           <div class="pin-section">
-            <div class="pin-status" id="pinStatus">No PIN set — settings are unlocked</div>
+            <div class="pin-status" id="pinStatus">
+              <span class="pin-status-dot"></span>
+              No PIN set — settings are unlocked
+            </div>
             <div class="pin-form" id="pinForm">
               <div class="pin-field">
                 <label>New PIN (4–8 digits)</label>
                 <input type="password" class="pin-input-sm" id="newPin" maxlength="8" placeholder="••••" inputmode="numeric">
               </div>
               <div class="pin-field">
-                <label>Confirm</label>
+                <label>Confirm PIN</label>
                 <input type="password" class="pin-input-sm" id="confirmPin" maxlength="8" placeholder="••••" inputmode="numeric">
               </div>
               <button class="btn-sm" id="setPinBtn">Set PIN</button>
-              <button class="btn-sm danger" id="removePinBtn" style="display:none">Remove PIN</button>
+              <button class="btn-sm danger" id="removePinBtn" style="display:none">Remove</button>
             </div>
             <div class="pin-msg" id="pinMsg"></div>
           </div>
@@ -531,36 +881,46 @@
 
       <!-- ── STATS ── -->
       <div class="section">
-        <div class="section-title">Focus Stats</div>
+        <div class="section-title">
+          <span class="section-title-text">Focus Stats</span>
+          <div class="section-title-line"></div>
+        </div>
         <div class="card">
           <div class="stats-grid">
             <div class="stat-box">
               <div class="stat-big orange" id="statStreak">0</div>
-              <div class="stat-lbl">day streak</div>
+              <div class="stat-lbl">Day Streak</div>
             </div>
             <div class="stat-box">
               <div class="stat-big" id="statLongest">0</div>
-              <div class="stat-lbl">best streak</div>
+              <div class="stat-lbl">Best Streak</div>
             </div>
             <div class="stat-box">
               <div class="stat-big" id="statSessions">0</div>
-              <div class="stat-lbl">sessions</div>
+              <div class="stat-lbl">Sessions</div>
             </div>
             <div class="stat-box">
               <div class="stat-big" id="statMinutes">0</div>
-              <div class="stat-lbl">min focus</div>
+              <div class="stat-lbl">Min Focus</div>
             </div>
           </div>
           <div class="stats-footer">
-            <button class="btn-ghost" id="resetStatsBtn">Reset stats</button>
+            <button class="btn-ghost" id="resetStatsBtn">Reset all stats</button>
           </div>
         </div>
       </div>
 
-    </div><!-- /content -->
-  </div><!-- /mainContent -->
+    </div>
+  </div>
 
-  <div id="saveIndicator">✓ Saved</div>
+  <div id="saveIndicator">
+    <div class="save-check">
+      <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
+        <path d="M1.5 5.5l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    Saved
+  </div>
 
   <script src="options.js"></script>
 </body>

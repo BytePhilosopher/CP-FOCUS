@@ -3,20 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Blocked — CF Focus</title>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+  <title>Focus Mode — CF Focus</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #0d0f14;
-      --surface: #161a22;
-      --border: #2a2f3d;
-      --accent: #e53e3e;
-      --text: #e8eaf0;
-      --muted: #6b7280;
-      --mono: 'JetBrains Mono', monospace;
-      --sans: 'Space Grotesk', sans-serif;
+      --bg:      #0d1117;
+      --surface: #161b27;
+      --border:  #21293d;
+      --brand:   #6366f1;
+      --text:    #e6edf3;
+      --text2:   #7d8590;
+      --muted:   #3d4a5c;
+      --mono:    'JetBrains Mono', monospace;
+      --sans:    'Inter', sans-serif;
     }
 
     body {
@@ -25,195 +27,292 @@
       font-family: var(--sans);
       min-height: 100vh;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 40px 20px;
+      padding: 48px 24px;
     }
 
-    /* Grid lines background */
+    /* Very subtle top glow - brand color, not alarming red */
     body::before {
       content: '';
       position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(229,62,62,0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(229,62,62,0.04) 1px, transparent 1px);
-      background-size: 60px 60px;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 300px;
+      background: radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.07) 0%, transparent 70%);
       pointer-events: none;
     }
 
     .container {
-      max-width: 480px;
+      max-width: 440px;
       width: 100%;
-      text-align: center;
       position: relative;
       z-index: 1;
     }
 
-    .badge {
+    /* ── Top nav ── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 48px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-logo {
+      width: 28px;
+      height: 28px;
+      background: var(--brand);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--mono);
+      font-weight: 700;
+      font-size: 11px;
+      color: white;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.3px;
+    }
+
+    /* ── Status badge ── */
+    .mode-badge {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      background: rgba(229,62,62,0.1);
-      border: 1px solid rgba(229,62,62,0.3);
-      border-radius: 20px;
-      padding: 5px 14px;
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      border-radius: 100px;
+      padding: 5px 12px;
       font-family: var(--mono);
-      font-size: 11px;
-      color: #fc8181;
-      letter-spacing: 0.5px;
-      margin-bottom: 28px;
-    }
-
-    .badge-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: #e53e3e;
-      animation: blink 1.2s ease-in-out infinite;
-    }
-
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
-
-    .lock-icon {
-      font-size: 56px;
-      line-height: 1;
-      margin-bottom: 24px;
-      filter: grayscale(0.2);
-    }
-
-    h1 {
-      font-size: 32px;
+      font-size: 10px;
       font-weight: 600;
-      letter-spacing: -1px;
-      margin-bottom: 12px;
-      color: var(--text);
-    }
-
-    h1 span {
-      color: #fc8181;
-    }
-
-    .sub {
-      font-size: 15px;
-      color: var(--muted);
-      line-height: 1.6;
+      color: #a5b4fc;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
       margin-bottom: 36px;
     }
 
-    .quote-box {
+    .mode-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--brand);
+      animation: breathe 2.5s ease-in-out infinite;
+    }
+
+    @keyframes breathe {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    /* ── Icon ── */
+    .icon-wrap {
+      width: 64px;
+      height: 64px;
+      background: rgba(99, 102, 241, 0.08);
+      border: 1px solid rgba(99, 102, 241, 0.15);
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 28px;
+      color: #a5b4fc;
+    }
+
+    /* ── Heading ── */
+    h1 {
+      font-size: 36px;
+      font-weight: 700;
+      letter-spacing: -1.5px;
+      line-height: 1.05;
+      color: var(--text);
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
+    .headline-accent {
+      color: var(--brand);
+    }
+
+    .subtitle {
+      font-size: 15px;
+      color: var(--text2);
+      line-height: 1.6;
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .site-name {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    /* ── Quote ── */
+    .quote-wrap {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-left: 3px solid var(--accent);
-      border-radius: 8px;
-      padding: 16px 20px;
-      margin-bottom: 32px;
+      border-radius: 12px;
+      padding: 20px 22px;
+      margin-bottom: 28px;
       text-align: left;
     }
 
-    .quote-box p {
+    .quote-eyebrow {
       font-family: var(--mono);
-      font-size: 12px;
-      color: var(--muted);
-      line-height: 1.7;
-    }
-
-    .quote-box strong {
-      color: var(--text);
+      font-size: 9px;
       font-weight: 600;
+      letter-spacing: 1.3px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
     }
 
-    .quotes-cycle {
-      font-family: var(--mono);
+    .quote-text {
       font-size: 13px;
-      color: #a0aec0;
+      color: var(--text2);
+      line-height: 1.75;
       font-style: italic;
     }
 
-    .back-btn {
+    /* ── Actions ── */
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 32px;
+    }
+
+    .btn {
+      flex: 1;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      background: var(--surface);
-      color: var(--text);
+      justify-content: center;
+      gap: 6px;
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 11px 16px;
+      border-radius: 9px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.15s ease;
+      letter-spacing: -0.1px;
+    }
+    .btn:active { transform: scale(0.97); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text2);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px 20px;
-      font-family: var(--sans);
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      text-decoration: none;
-      transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-ghost:hover {
+      background: var(--surface);
+      border-color: #2d3a52;
+      color: var(--text);
     }
 
-    .back-btn:hover {
-      border-color: #4a5568;
+    .btn-brand {
+      background: var(--brand);
       color: white;
+      border: 1px solid transparent;
+      font-weight: 600;
+    }
+    .btn-brand:hover {
+      background: #4f52e0;
     }
 
-    .cf-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: var(--accent);
-      color: white;
-      border: none;
-      border-radius: 8px;
-      padding: 10px 20px;
-      font-family: var(--sans);
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      text-decoration: none;
-      margin-left: 10px;
-      transition: opacity 0.2s;
-    }
-
-    .cf-link:hover { opacity: 0.85; }
-
+    /* ── Footer ── */
     .footer-note {
-      margin-top: 28px;
+      text-align: center;
       font-family: var(--mono);
-      font-size: 11px;
-      color: #4a5568;
+      font-size: 10px;
+      color: var(--muted);
+      line-height: 1.6;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="badge">
-      <div class="badge-dot"></div>
-      CF FOCUS — ACTIVE
+
+    <div class="topbar">
+      <div class="brand">
+        <div class="brand-logo">CF</div>
+        <span class="brand-name">CF Focus</span>
+      </div>
     </div>
 
-    <div class="lock-icon">🔒</div>
-
-    <h1>AI is <span>blocked</span></h1>
-    <p class="sub" id="subText">AI assistance is disabled while you're in focus mode.<br>Trust your brain — you're stronger than you think.</p>
-
-    <div class="quote-box">
-      <p class="quotes-cycle" id="quote"></p>
+    <div style="text-align:center">
+      <div class="mode-badge">
+        <div class="mode-dot"></div>
+        Focus Mode Active
+      </div>
     </div>
 
-    <div>
-      <a class="back-btn" onclick="history.back()">← Go back</a>
-      <a class="cf-link" href="https://codeforces.com" target="_blank">Back to CF →</a>
+    <div class="icon-wrap">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.5"/>
+        <circle cx="12" cy="12" r="5.5" stroke="currentColor" stroke-width="1.5"/>
+        <circle cx="12" cy="12" r="2" fill="currentColor"/>
+        <line x1="12" y1="2.5" x2="12" y2="4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="12" y1="19.5" x2="12" y2="21.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="2.5" y1="12" x2="4.5" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="19.5" y1="12" x2="21.5" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
     </div>
 
-    <p class="footer-note">close all codeforces.com tabs to re-enable AI sites</p>
+    <h1>Stay <span class="headline-accent">focused.</span></h1>
+
+    <p class="subtitle" id="subText">
+      You're in focus mode.<br>
+      Trust your skills — you're stronger than you think.
+    </p>
+
+    <div class="quote-wrap">
+      <div class="quote-eyebrow">Quote of the session</div>
+      <p class="quote-text" id="quote"></p>
+    </div>
+
+    <div class="actions">
+      <a class="btn btn-ghost" onclick="history.back(); return false;" href="#">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+          <path d="M10 12.5L5.5 8 10 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Go back
+      </a>
+      <a class="btn btn-brand" href="https://codeforces.com" target="_blank">
+        Open Codeforces
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+          <path d="M6 3.5L10.5 8 6 12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+    </div>
+
+    <p class="footer-note" id="footerNote">
+      CF Focus is active while a practice tab is open
+    </p>
+
   </div>
 
   <script>
-    // Show which site was blocked
     const params = new URLSearchParams(window.location.search);
     const fromSite = params.get('from');
     if (fromSite) {
       document.getElementById('subText').innerHTML =
-        `<strong style="color:#fc8181">${fromSite}</strong> is blocked while you're in focus mode.<br>Trust your brain — you're stronger than you think.`;
+        `<span class="site-name">${fromSite}</span> is paused during focus mode.<br>Trust your skills — you're stronger than you think.`;
     }
 
     const quotes = [
@@ -226,7 +325,7 @@
       '"You opened Codeforces to practice. So practice."',
       '"The discomfort of not knowing is exactly where growth lives."',
     ];
-    document.getElementById("quote").textContent = quotes[Math.floor(Math.random() * quotes.length)];
+    document.getElementById('quote').textContent = quotes[Math.floor(Math.random() * quotes.length)];
   </script>
 </body>
 </html>
