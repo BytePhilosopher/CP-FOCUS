@@ -75,6 +75,36 @@ async function hashPin(pin) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// Ask Chrome for host access to a custom domain so DNR rules can fire on it.
+// User-gesture-initiated, so the browser will show its native permission prompt.
+function requestHostPermissionFor(domain) {
+  return new Promise(resolve => {
+    const origins = [`*://${domain}/*`, `*://*.${domain}/*`];
+    try {
+      chrome.permissions.request({ origins }, granted => {
+        void chrome.runtime.lastError;
+        resolve(!!granted);
+      });
+    } catch (_) {
+      resolve(false);
+    }
+  });
+}
+
+function hasHostPermissionFor(domain) {
+  return new Promise(resolve => {
+    const origins = [`*://${domain}/*`, `*://*.${domain}/*`];
+    try {
+      chrome.permissions.contains({ origins }, has => {
+        void chrome.runtime.lastError;
+        resolve(!!has);
+      });
+    } catch (_) {
+      resolve(false);
+    }
+  });
+}
+
 let saveTimer = null;
 function flashSaved() {
   const el = document.getElementById('saveIndicator');
@@ -316,6 +346,8 @@ async function addCustomPlatform() {
     return;
   }
 
+  // Custom platforms only need URL detection (via the tabs permission), not
+  // host_permissions — DNR rules fire on the blocked AI sites, not the platform.
   const updated = [...existing, { name, domain }];
   await saveSettings({ customPlatforms: updated });
   nameInput.value = '';
@@ -524,10 +556,19 @@ function renderSchedule(settings) {
     const end   = Number(endH.value);
     const fill  = document.getElementById('schedTimelineFill');
     if (!fill) return;
-    const leftPct  = (start / 24) * 100;
-    const widthPct = Math.max(0, (end - start) / 24) * 100;
-    fill.style.left  = `${leftPct}%`;
-    fill.style.width = `${widthPct}%`;
+    // Overnight windows are visually two segments; CSS supports one fill, so we approximate
+    // by drawing the "since-midnight" portion plus the "until-midnight" portion combined.
+    if (end > start) {
+      fill.style.left  = `${(start / 24) * 100}%`;
+      fill.style.width = `${((end - start) / 24) * 100}%`;
+    } else if (end < start) {
+      // Show the larger of the two halves to indicate overnight
+      fill.style.left  = `${(start / 24) * 100}%`;
+      fill.style.width = `${((24 - start) / 24) * 100}%`;
+    } else {
+      fill.style.left  = '0%';
+      fill.style.width = '0%';
+    }
   }
 
   function updatePreview() {
@@ -548,16 +589,20 @@ function renderSchedule(settings) {
       preview.className = 'sched-preview live';
       return;
     }
-    if (end <= start) {
-      preview.innerHTML = '<span style="color:var(--red)">End time must be later than start time.</span>';
+    if (end === start) {
+      preview.innerHTML = '<span style="color:var(--red)">Start and end times can’t be the same.</span>';
       preview.className = 'sched-preview live';
       return;
     }
-    const durH = end - start;
+    const overnight = end < start;
+    const durH = overnight ? (24 - start) + end : end - start;
+    const overnightHint = overnight
+      ? ' <span style="color:var(--muted)">(overnight — ends next day)</span>'
+      : '';
     preview.innerHTML =
       `Blocking <strong>${activeDays.join(', ')}</strong> ` +
       `from <strong>${fmtHour(start)}</strong> to <strong>${fmtHour(end)}</strong> ` +
-      `<span style="color:var(--muted)">(${durH}h window)</span>`;
+      `<span style="color:var(--muted)">(${durH}h window)</span>${overnightHint}`;
     preview.className = 'sched-preview live';
   }
 
@@ -757,6 +802,20 @@ async function addCustomSite() {
     input.value = '';
     return;
   }
+
+  // Custom blocklist sites are DNR redirect *sources* — they require host_permission.
+  // For default AI sites this is granted in the manifest; for user-added sites we
+  // ask via the optional permission flow so we don't have to request the entire web.
+  const alreadyGranted = await hasHostPermissionFor(domain);
+  if (!alreadyGranted) {
+    const granted = await requestHostPermissionFor(domain);
+    if (!granted) {
+      input.style.borderColor = 'var(--red)';
+      setTimeout(() => { input.style.borderColor = ''; }, 1500);
+      return;
+    }
+  }
+
   const updated = [...s.customBlocklist, domain];
   await saveSettings({ customBlocklist: updated });
   input.value = '';

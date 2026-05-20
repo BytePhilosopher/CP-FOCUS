@@ -15,18 +15,20 @@
       --s2:    #141414;
       --b1:    #1a1a1a;
       --b2:    #252525;
+      /* Brand red — bloody crimson — used for "blocked" intensity */
       --red:   #c8191c;
       --red-d: rgba(200,25,28,0.08);
       --red-m: rgba(200,25,28,0.22);
-      --amber: #f59e0b;
-      --amber-d: rgba(245,158,11,0.08);
-      --amber-m: rgba(245,158,11,0.22);
-      --green: #22c55e;
-      --green-d: rgba(34,197,94,0.08);
-      --green-m: rgba(34,197,94,0.22);
+      --red-h: rgba(200,25,28,0.45);
+      /* Tier-1/2 use a softer red that reads as "warming up" */
+      --red2:   #ff5a5d;
+      --red2-d: rgba(255,90,93,0.08);
+      --red2-m: rgba(255,90,93,0.25);
+      /* Tier-3 (earned) uses pure white on red — the visual reward */
+      --white: #ffffff;
       --text:  #f0f0f0;
-      --text2: #777777;
-      --muted: #333333;
+      --text2: #888888;
+      --muted: #444444;
       --dim:   rgba(255,255,255,0.08);
       --mono:  'JetBrains Mono', monospace;
       --sans:  'Inter', sans-serif;
@@ -129,12 +131,12 @@
     }
     .hint-track-fill {
       height: 100%; border-radius: 3px;
-      transition: width 0.5s ease, background 0.3s ease;
+      transition: width 0.5s linear, background 0.3s ease;
     }
     .hint-track-fill.t0 { background: var(--red); }
-    .hint-track-fill.t1 { background: var(--amber); }
-    .hint-track-fill.t2 { background: var(--amber); }
-    .hint-track-fill.t3 { background: var(--green); }
+    .hint-track-fill.t1 { background: var(--red2); }
+    .hint-track-fill.t2 { background: var(--red2); }
+    .hint-track-fill.t3 { background: var(--white); }
 
     /* Tier steps */
     .hint-steps {
@@ -146,21 +148,26 @@
       background: var(--bg); transition: all 0.3s;
     }
     .hint-step.active {
-      border-color: var(--amber-m); background: var(--amber-d);
+      border-color: var(--red2-m); background: var(--red2-d);
     }
     .hint-step.active.t0 {
-      border-color: var(--red-m); background: var(--red-d);
+      border-color: var(--red-h); background: var(--red-d);
     }
     .hint-step.active.t3 {
-      border-color: var(--green-m); background: var(--green-d);
+      border-color: var(--white); background: rgba(255,255,255,0.06);
     }
     .hint-step-icon {
-      font-size: 18px; margin-bottom: 4px; line-height: 1;
-      filter: grayscale(1) opacity(0.3);
-      transition: filter 0.3s;
+      width: 22px; height: 22px;
+      margin: 0 auto 4px; line-height: 0;
+      color: var(--muted);
+      transition: color 0.3s;
+      display: flex; align-items: center; justify-content: center;
     }
-    .hint-step.reached .hint-step-icon,
-    .hint-step.active .hint-step-icon { filter: none; }
+    .hint-step-icon svg { width: 100%; height: 100%; display: block; }
+    .hint-step.reached .hint-step-icon { color: var(--text2); }
+    .hint-step.active .hint-step-icon { color: var(--text); }
+    .hint-step.active.t0 .hint-step-icon { color: var(--red); }
+    .hint-step.active.t3 .hint-step-icon { color: var(--white); }
     .hint-step-label {
       font-family: var(--mono); font-size: 9px; font-weight: 600;
       letter-spacing: 0.5px; text-transform: uppercase;
@@ -184,9 +191,9 @@
       transition: border-color 0.3s;
     }
     .tier-card.visible { display: block; }
-    .tier-card.t1 { border-color: var(--amber-m); }
-    .tier-card.t2 { border-color: var(--amber-m); }
-    .tier-card.t3 { border-color: var(--green-m); }
+    .tier-card.t1 { border-color: var(--red2-m); }
+    .tier-card.t2 { border-color: var(--red2-m); }
+    .tier-card.t3 { border-color: rgba(255,255,255,0.4); }
 
     .tier-card-header {
       display: flex; align-items: center; gap: 10px;
@@ -197,9 +204,9 @@
       letter-spacing: 0.8px; text-transform: uppercase;
       padding: 3px 10px; border-radius: 100px;
     }
-    .tier-card-badge.t1 { background: var(--amber-d); color: var(--amber); border: 1px solid var(--amber-m); }
-    .tier-card-badge.t2 { background: var(--amber-d); color: var(--amber); border: 1px solid var(--amber-m); }
-    .tier-card-badge.t3 { background: var(--green-d); color: var(--green); border: 1px solid var(--green-m); }
+    .tier-card-badge.t1 { background: var(--red2-d); color: var(--red2); border: 1px solid var(--red2-m); }
+    .tier-card-badge.t2 { background: var(--red2-d); color: var(--red2); border: 1px solid var(--red2-m); }
+    .tier-card-badge.t3 { background: rgba(255,255,255,0.06); color: var(--white); border: 1px solid rgba(255,255,255,0.4); }
     .tier-card-title {
       font-size: 15px; font-weight: 700; color: var(--text);
       letter-spacing: -0.3px;
@@ -212,13 +219,16 @@
     .btn-unlock-ai {
       display: inline-flex; align-items: center; justify-content: center; gap: 7px;
       width: 100%; margin-top: 16px; padding: 13px;
-      background: var(--green); border: none; border-radius: 10px;
+      background: var(--white); border: none; border-radius: 10px;
       color: #000; font-family: var(--sans); font-size: 13px; font-weight: 700;
-      cursor: pointer; transition: opacity 0.15s, transform 0.1s;
+      cursor: pointer; transition: opacity 0.15s, transform 0.1s, background 0.15s;
     }
-    .btn-unlock-ai:hover { opacity: 0.85; }
+    .btn-unlock-ai:hover { background: #e8e8e8; }
     .btn-unlock-ai:active { transform: scale(0.97); }
-    .btn-unlock-ai:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-unlock-ai:disabled {
+      background: transparent; color: var(--muted);
+      border: 1px solid var(--b2); cursor: not-allowed;
+    }
 
     /* ── Headline ── */
     .stop-icon {
@@ -342,22 +352,43 @@
       </div>
       <div class="hint-steps" id="hintSteps">
         <div class="hint-step active t0" data-tier="0">
-          <div class="hint-step-icon">&#x1F6D1;</div>
+          <div class="hint-step-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
+              <path d="M6.5 6.5l11 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </div>
           <div class="hint-step-label">Blocked</div>
           <div class="hint-step-time" id="tierTime0">&lt;15m</div>
         </div>
         <div class="hint-step" data-tier="1">
-          <div class="hint-step-icon">&#x1F4A1;</div>
+          <div class="hint-step-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.5.4.8 1 .8 1.6V16h5.4v-.5c0-.6.3-1.2.8-1.6A6 6 0 0 0 12 3z"
+                stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
           <div class="hint-step-label">Hint 1</div>
           <div class="hint-step-time" id="tierTime1">15m</div>
         </div>
         <div class="hint-step" data-tier="2">
-          <div class="hint-step-icon">&#x1F50D;</div>
+          <div class="hint-step-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.8"/>
+              <path d="M15.8 15.8L20 20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </div>
           <div class="hint-step-label">Hint 2</div>
           <div class="hint-step-time" id="tierTime2">25m</div>
         </div>
         <div class="hint-step" data-tier="3">
-          <div class="hint-step-icon">&#x2705;</div>
+          <div class="hint-step-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <rect x="4" y="11" width="16" height="10" rx="2.5" stroke="currentColor" stroke-width="1.8"/>
+              <path d="M8 11V7.5a4 4 0 0 1 8 0V11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <circle cx="12" cy="16" r="1.4" fill="currentColor"/>
+            </svg>
+          </div>
           <div class="hint-step-label">Unlock</div>
           <div class="hint-step-time" id="tierTime3">35m</div>
         </div>

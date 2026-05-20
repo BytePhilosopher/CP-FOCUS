@@ -125,7 +125,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const isSnoozed      = settings.snoozeUntil && now < settings.snoozeUntil;
     const isBlocking     = local.blocking;
     const focusSession   = local.focusSession;
-    const isFocusSession = focusSession && now < focusSession.endTime;
+    // A paused session (snoozed) is still "active" — we just freeze its remaining time
+    const isFocusSession = focusSession && (focusSession.pausedRemainingMs > 0 || now < focusSession.endTime);
+    const isFocusPaused  = isFocusSession && focusSession.pausedRemainingMs > 0;
     const isHardcore     = isFocusSession && focusSession.hardcore;
 
     // ── Streak ────────────────────────────────────────────────────────────────
@@ -169,8 +171,11 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (isFocusSession) {
       statusDot.className   = 'status-dot session';
       statusLabel.textContent = isHardcore ? 'Hardcore Mode' : 'Focus Session';
-      const minsLeft = Math.ceil((focusSession.endTime - now) / 60000);
-      statusSub.textContent = `${minsLeft}m left`;
+      const remainingMs = isFocusPaused
+        ? focusSession.pausedRemainingMs
+        : Math.max(0, focusSession.endTime - now);
+      const minsLeft = Math.ceil(remainingMs / 60000);
+      statusSub.textContent = isFocusPaused ? `${minsLeft}m left · paused` : `${minsLeft}m left`;
       statusBadge.className = 'status-badge session';
       statusBadge.textContent = isHardcore ? 'Locked' : 'Active';
       footerNote.textContent = isHardcore ? 'no snooze, no exit' : 'end session to stop blocking';
@@ -209,9 +214,15 @@ document.addEventListener('DOMContentLoaded', () => {
     sessionActive.style.display = isFocusSession ? 'block' : 'none';
 
     if (isFocusSession) {
-      renderRing(focusSession.endTime, focusSession.duration, now);
+      if (isFocusPaused) {
+        // Render a static ring showing the frozen remaining time
+        const frozenEnd = now + focusSession.pausedRemainingMs;
+        renderRing(frozenEnd, focusSession.duration, now);
+      } else {
+        renderRing(focusSession.endTime, focusSession.duration, now);
+      }
       if (ringLabel) {
-        ringLabel.textContent = isHardcore ? 'hardcore' : 'session';
+        ringLabel.textContent = isFocusPaused ? 'paused' : (isHardcore ? 'hardcore' : 'session');
         ringLabel.setAttribute('fill', '#555');
       }
       hardcoreBadge.style.display = isHardcore ? 'flex' : 'none';
@@ -220,11 +231,12 @@ document.addEventListener('DOMContentLoaded', () => {
         endSessionBtn.textContent = 'End Session';
         endSessionBtn.classList.remove('confirming');
       }
-      if (!timerInterval) {
+      if (!timerInterval && !isFocusPaused) {
         timerInterval = setInterval(() => {
           if (!state || !state.local.focusSession) return;
-          const n = Date.now();
           const s = state.local.focusSession;
+          if (s.pausedRemainingMs) return; // paused — don't tick
+          const n = Date.now();
           if (n >= s.endTime) {
             clearInterval(timerInterval);
             timerInterval = null;
@@ -233,6 +245,9 @@ document.addEventListener('DOMContentLoaded', () => {
             renderRing(s.endTime, s.duration, n);
           }
         }, 1000);
+      } else if (isFocusPaused && timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
       }
     } else {
       if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }

@@ -39,9 +39,11 @@ document.getElementById('quote').textContent =
 let sessionData = null;
 let hintTiers   = { hint1At: 15, hint2At: 25, unlockAt: 35, unlockMinutes: 10 };
 let problemStartTime = null;
+let problemPausedAt  = null;
 let isHardcoreSession = false;
 let timerInterval = null;
 let hintInterval  = null;
+let tickInterval  = null;
 
 // ─── "Go back to problem" — find an open focus tab and switch to it ──────────
 document.getElementById('goBackBtn').addEventListener('click', () => {
@@ -139,12 +141,8 @@ function countBlockOnce() {
 countBlockOnce();
 
 // ─── Hint timeline ────────────────────────────────────────────────────────────
-function renderHintUI(tier, elapsed) {
-  const trackFill = document.getElementById('hintTrackFill');
-  const elapsedEl = document.getElementById('hintElapsedText');
-  const steps     = document.querySelectorAll('#hintSteps .hint-step');
-
-  // Tier-time labels reflect the user's configured thresholds
+// Tier labels never change, so set them once.
+function updateTierTimeLabels() {
   const t0 = document.getElementById('tierTime0');
   const t1 = document.getElementById('tierTime1');
   const t2 = document.getElementById('tierTime2');
@@ -153,56 +151,94 @@ function renderHintUI(tier, elapsed) {
   if (t1) t1.textContent = `${hintTiers.hint1At}m`;
   if (t2) t2.textContent = `${hintTiers.hint2At}m`;
   if (t3) t3.textContent = `${hintTiers.unlockAt}m`;
+  const unlockLbl = document.getElementById('unlockAiBtnLabel');
+  if (unlockLbl) unlockLbl.textContent = `Unlock AI for ${hintTiers.unlockMinutes || 10} minutes`;
+}
 
-  if (elapsedEl) {
-    elapsedEl.textContent = problemStartTime
-      ? `${elapsed}m focused`
-      : 'not yet tracking';
+// Compute tier locally from elapsed milliseconds, so the UI ticks every second
+// without needing a roundtrip to the background.
+function computeTier(elapsedMs) {
+  const m = Math.floor(elapsedMs / 60000);
+  if (m >= hintTiers.unlockAt) return 3;
+  if (m >= hintTiers.hint2At)  return 2;
+  if (m >= hintTiers.hint1At)  return 1;
+  return 0;
+}
+
+function formatElapsed(elapsedMs) {
+  const totalSec = Math.max(0, Math.floor(elapsedMs / 1000));
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${String(s).padStart(2, '0')} focused`;
+}
+
+function renderHintTick() {
+  if (isHardcoreSession) return;
+  const trackFill = document.getElementById('hintTrackFill');
+  const elapsedEl = document.getElementById('hintElapsedText');
+  const steps     = document.querySelectorAll('#hintSteps .hint-step');
+
+  if (!problemStartTime) {
+    if (elapsedEl) elapsedEl.textContent = 'not yet tracking';
+    if (trackFill) {
+      trackFill.style.width = '0%';
+      trackFill.classList.remove('t0', 't1', 't2', 't3');
+      trackFill.classList.add('t0');
+    }
+    return;
   }
 
-  // Track fill: percentage toward final unlock
-  const target = Math.max(1, hintTiers.unlockAt);
-  const pct = Math.min(100, Math.round((elapsed / target) * 100));
+  // Pause-aware elapsed: if the timer is paused, freeze at the paused-at moment.
+  const endRef = problemPausedAt || Date.now();
+  const elapsedMs = Math.max(0, endRef - problemStartTime);
+  const tier = computeTier(elapsedMs);
+
+  if (elapsedEl) {
+    elapsedEl.textContent = problemPausedAt
+      ? `${formatElapsed(elapsedMs)} · paused`
+      : formatElapsed(elapsedMs);
+  }
+
+  // Smooth sub-minute fill — percentage toward the unlockAt threshold
+  const targetMs = Math.max(1, hintTiers.unlockAt) * 60000;
+  const pct = Math.min(100, (elapsedMs / targetMs) * 100);
   if (trackFill) {
-    trackFill.style.width = `${pct}%`;
+    trackFill.style.width = `${pct.toFixed(2)}%`;
     trackFill.classList.remove('t0', 't1', 't2', 't3');
     trackFill.classList.add(`t${tier}`);
   }
 
-  // Active / reached steps
   steps.forEach(step => {
     const stepTier = Number(step.dataset.tier);
     step.classList.remove('active', 't0', 't3');
     step.classList.toggle('reached', stepTier < tier);
     if (stepTier === tier) {
       step.classList.add('active');
-      // tier-0 is red, tier-3 is green, tier-1/2 fall back to amber via base .active rule
       if (stepTier === 0) step.classList.add('t0');
       if (stepTier === 3) step.classList.add('t3');
     }
   });
 
-  // Tier cards: show progressively
   document.getElementById('tierCard1').classList.toggle('visible', tier >= 1);
   document.getElementById('tierCard2').classList.toggle('visible', tier >= 2);
   document.getElementById('tierCard3').classList.toggle('visible', tier >= 3);
 
-  // Unlock button: enable only at tier 3
   const unlockBtn = document.getElementById('unlockAiBtn');
-  const unlockLbl = document.getElementById('unlockAiBtnLabel');
   if (unlockBtn) unlockBtn.disabled = tier < 3;
-  if (unlockLbl) unlockLbl.textContent = `Unlock AI for ${hintTiers.unlockMinutes || 10} minutes`;
 }
 
 function refreshHintState() {
   chrome.runtime.sendMessage({ type: 'GET_STATE' }, response => {
     void chrome.runtime.lastError;
     if (!response) return;
-    const { local, hintTier, hintElapsed, hintTiers: tiers } = response;
-    if (tiers) hintTiers = { ...hintTiers, ...tiers };
+    const { local, hintTiers: tiers } = response;
+    if (tiers) {
+      hintTiers = { ...hintTiers, ...tiers };
+      updateTierTimeLabels();
+    }
     problemStartTime = local.problemStartTime;
+    problemPausedAt  = local.problemPausedAt || null;
 
-    // Hide the entire hint timeline during hardcore sessions (no unlock allowed)
     const hardcoreActive = local.focusSession && local.focusSession.hardcore && Date.now() < local.focusSession.endTime;
     isHardcoreSession = !!hardcoreActive;
     const timeline = document.getElementById('hintTimeline');
@@ -213,27 +249,29 @@ function refreshHintState() {
       document.getElementById('tierCard3').classList.remove('visible');
       return;
     }
-
-    renderHintUI(hintTier || 0, hintElapsed || 0);
+    renderHintTick();
   });
 }
 
 document.getElementById('unlockAiBtn').addEventListener('click', () => {
   const btn = document.getElementById('unlockAiBtn');
   btn.disabled = true;
-  chrome.runtime.sendMessage({ type: 'HINT_UNLOCK' }, resp => {
+  const safeDomain = domain && /^([a-z0-9-]+\.)+[a-z]{2,}(\/[A-Za-z0-9_\-./]*)?$/.test(domain)
+    ? domain : null;
+  const targetUrl = safeDomain ? `https://${safeDomain}` : null;
+  chrome.runtime.sendMessage({ type: 'HINT_UNLOCK', targetUrl }, resp => {
     void chrome.runtime.lastError;
     if (!resp || resp.ok === false) {
       btn.disabled = false;
+      const lbl = document.getElementById('unlockAiBtnLabel');
+      if (lbl && resp && resp.reason === 'not_earned') {
+        lbl.textContent = `Need ${resp.required - resp.elapsed}m more first`;
+        setTimeout(() => updateTierTimeLabels(), 2500);
+      }
       return;
     }
-    // Navigate to the originally blocked AI page
-    const safeDomain = domain && /^([a-z0-9-]+\.)+[a-z]{2,}(\/[A-Za-z0-9_\-./]*)?$/.test(domain)
-      ? domain : null;
-    setTimeout(() => {
-      if (safeDomain) window.location.href = `https://${safeDomain}`;
-      else navigateToFocusPlatform();
-    }, 250);
+    // Background handles the tab.update; if it didn't (no sender.tab or no targetUrl), fall back here.
+    if (!targetUrl) navigateToFocusPlatform();
   });
 });
 
@@ -244,7 +282,7 @@ chrome.runtime.sendMessage({ type: 'GET_STATE' }, response => {
   const { local } = response;
   const now = Date.now();
   sessionData = local.focusSession;
-  const isSession = sessionData && now < sessionData.endTime;
+  const isSession = sessionData && (sessionData.pausedRemainingMs > 0 || now < sessionData.endTime);
 
   if (isSession) {
     document.getElementById('sessionCard').style.display = 'flex';
@@ -253,29 +291,38 @@ chrome.runtime.sendMessage({ type: 'GET_STATE' }, response => {
       document.getElementById('solvedBtn').style.display = 'none';
     }
     renderBigTimer();
-    timerInterval = setInterval(() => {
-      if (sessionData && Date.now() >= sessionData.endTime) {
-        clearInterval(timerInterval);
-        window.location.reload();
-        return;
-      }
-      renderBigTimer();
-    }, 1000);
+    // Tick only when the session isn't paused (snoozed)
+    if (!sessionData.pausedRemainingMs) {
+      timerInterval = setInterval(() => {
+        if (sessionData && Date.now() >= sessionData.endTime) {
+          clearInterval(timerInterval);
+          window.location.reload();
+          return;
+        }
+        renderBigTimer();
+      }, 1000);
+    }
 
-    document.getElementById('footerNote').textContent =
-      sessionData.hardcore
+    document.getElementById('footerNote').textContent = sessionData.pausedRemainingMs
+      ? 'Focus session paused (snoozed)'
+      : sessionData.hardcore
         ? 'Hardcore mode — stays locked until session ends'
         : 'Focus session active — solve it, then unlock AI';
   }
 
-  // Kick off hint timeline + live updates
+  // Kick off hint timeline:
+  //   - refreshHintState() syncs settings + problemStartTime from background (slow)
+  //   - renderHintTick() updates the bar/text locally every second (fast, no IPC)
   refreshHintState();
-  hintInterval = setInterval(refreshHintState, 20000);
+  hintInterval = setInterval(refreshHintState, 30000);
+  tickInterval = setInterval(renderHintTick, 1000);
 });
 
 function renderBigTimer() {
   if (!sessionData) return;
-  const remaining = Math.max(0, sessionData.endTime - Date.now());
+  const remaining = sessionData.pausedRemainingMs
+    ? sessionData.pausedRemainingMs
+    : Math.max(0, sessionData.endTime - Date.now());
   const totalSecs = Math.floor(remaining / 1000);
   const m = Math.floor(totalSecs / 60);
   const s = totalSecs % 60;
@@ -356,4 +403,5 @@ function navigateToFocusPlatform() {
 window.addEventListener('unload', () => {
   if (timerInterval) clearInterval(timerInterval);
   if (hintInterval)  clearInterval(hintInterval);
+  if (tickInterval)  clearInterval(tickInterval);
 });
