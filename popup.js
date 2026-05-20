@@ -1,38 +1,44 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const statusCard      = document.getElementById('statusCard');
-  const statusMain      = document.getElementById('statusMain');
+  const statusDot       = document.getElementById('statusDot');
+  const statusLabel     = document.getElementById('statusLabel');
   const statusSub       = document.getElementById('statusSub');
+  const statusBadge     = document.getElementById('statusBadge');
   const snoozeRow       = document.getElementById('snoozeRow');
   const snoozeBtn       = document.getElementById('snoozeBtn');
   const footerNote      = document.getElementById('footerNote');
-  const statusState     = document.getElementById('statusState');
-  const statusStateText = document.getElementById('statusStateText');
   const sessionIdle     = document.getElementById('sessionIdle');
   const sessionActive   = document.getElementById('sessionActive');
   const hardcoreBadge   = document.getElementById('hardcoreBadge');
   const endSessionBtn   = document.getElementById('endSessionBtn');
   const startSessionBtn = document.getElementById('startSessionBtn');
   const hardcoreToggle  = document.getElementById('hardcoreToggle');
-  // Ring refs:
   const ringProgress    = document.getElementById('ringProgress');
   const ringIdleArc     = document.getElementById('ringIdleArc');
   const ringTimerText   = document.getElementById('ringTimerText');
   const ringLabel       = document.getElementById('ringLabel');
-  // Session setup refs:
-  const previewDur   = document.getElementById('previewDur');
-  const previewMode  = document.getElementById('previewMode');
-  const hcCard       = document.getElementById('hcCard');
+  const previewDur      = document.getElementById('previewDur');
+  const previewMode     = document.getElementById('previewMode');
+  const hcCard          = document.getElementById('hcCard');
+  const durRow          = document.getElementById('durRow');
+  const streakNum       = document.getElementById('streakNum');
+  const dailyFill       = document.getElementById('dailyFill');
+  const dailyVal        = document.getElementById('dailyVal');
+  const todayTime       = document.getElementById('todayTime');
+  const todayBlocks     = document.getElementById('todayBlocks');
+  const todaySolved     = document.getElementById('todaySolved');
 
-  const RING_C = 515.22; // circumference of r=82
+  const RING_C = 515.22;
 
   let state = null;
   let selectedDuration = 45;
   let timerInterval = null;
   let endCountdown = null;
   let clockInterval = null;
+  let pollInterval = null;
 
-  // ── Session preview updater ───────────────────────────────────────────────────
+  // ── Preview ─────────────────────────────────────────────────────────────────
   function updatePreview() {
+    if (!hardcoreToggle) return;
     const isHC = hardcoreToggle.checked;
     if (previewDur)  previewDur.textContent  = `${selectedDuration} min`;
     if (previewMode) {
@@ -42,29 +48,26 @@ document.addEventListener('DOMContentLoaded', () => {
     if (hcCard) hcCard.classList.toggle('active', isHC);
   }
 
-  // ── Duration picker ──────────────────────────────────────────────────────────
-  document.getElementById('durRow').addEventListener('click', e => {
-    const btn = e.target.closest('[data-dur]');
-    if (!btn) return;
-    selectedDuration = Number(btn.dataset.dur);
-    document.querySelectorAll('.dur-btn').forEach(b => {
-      b.classList.toggle('selected', b === btn);
-    });
-    updatePreview();
-  });
-
-  // ── Hardcore card click ────────────────────────────────────────────────────
-  if (hcCard) {
-    hcCard.addEventListener('click', () => {
-      hardcoreToggle.checked = !hardcoreToggle.checked;
+  if (durRow) {
+    durRow.addEventListener('click', e => {
+      const btn = e.target.closest('[data-dur]');
+      if (!btn) return;
+      selectedDuration = Number(btn.dataset.dur);
+      durRow.querySelectorAll('.dur-btn').forEach(b => b.classList.toggle('selected', b === btn));
       updatePreview();
     });
   }
-  hardcoreToggle.addEventListener('change', updatePreview);
-  updatePreview(); // init
+  if (hcCard) {
+    hcCard.addEventListener('click', () => {
+      if (hardcoreToggle) { hardcoreToggle.checked = !hardcoreToggle.checked; updatePreview(); }
+    });
+  }
+  if (hardcoreToggle) hardcoreToggle.addEventListener('change', updatePreview);
+  updatePreview();
 
-  // ── Snooze button text helper ─────────────────────────────────────────────────
+  // ── Snooze button helper ────────────────────────────────────────────────────
   function setSnoozeBtn(text) {
+    if (!snoozeBtn) return;
     const svg = snoozeBtn.querySelector('svg');
     const svgClone = svg ? svg.cloneNode(true) : null;
     snoozeBtn.innerHTML = '';
@@ -72,40 +75,36 @@ document.addEventListener('DOMContentLoaded', () => {
     snoozeBtn.appendChild(document.createTextNode(' ' + text));
   }
 
-  // ── Clock (shown in ring center when no session) ──────────────────────────────
+  // ── Clock ───────────────────────────────────────────────────────────────────
   function updateClock() {
     const now = new Date();
     const h = String(now.getHours()).padStart(2, '0');
     const m = String(now.getMinutes()).padStart(2, '0');
     if (ringTimerText) {
       ringTimerText.textContent = `${h}:${m}`;
-      ringTimerText.setAttribute('fill', '#4a4a4a');
+      ringTimerText.setAttribute('fill', '#3a3a3a');
     }
   }
 
-  // ── Ring renderer (session active) ───────────────────────────────────────────
+  // ── Ring ─────────────────────────────────────────────────────────────────────
   function renderRing(endTime, duration, now) {
-    // Switch to red progress ring
     if (ringIdleArc) ringIdleArc.style.opacity = '0';
     if (ringProgress) ringProgress.style.opacity = '1';
-    // Stop clock
     if (clockInterval) { clearInterval(clockInterval); clockInterval = null; }
 
     const totalMs = (duration || 45) * 60000;
     const remainMs = Math.max(0, endTime - now);
-    const pct = totalMs > 0 ? remainMs / totalMs : 0; // 1=full, 0=empty
-    if (ringProgress) ringProgress.style.strokeDashoffset = RING_C * (1 - pct);
+    const pct = totalMs > 0 ? remainMs / totalMs : 0;
+    if (ringProgress) ringProgress.style.strokeDashoffset = String(RING_C * (1 - pct));
     if (ringTimerText) ringTimerText.setAttribute('fill', '#f0f0f0');
-    if (ringLabel) ringLabel.setAttribute('fill', '#777777');
+    if (ringLabel) ringLabel.setAttribute('fill', '#777');
     const totalSecs = Math.floor(remainMs / 1000);
     const m = Math.floor(totalSecs / 60);
     const s = totalSecs % 60;
     if (ringTimerText) ringTimerText.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   }
 
-  // ── Ring idle reset (no session — spinning white arc + clock) ─────────────────
   function resetRing(label) {
-    // Switch to spinning idle arc
     if (ringIdleArc) ringIdleArc.style.opacity = '1';
     if (ringProgress) {
       ringProgress.style.opacity = '0';
@@ -113,19 +112,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (ringLabel) {
       ringLabel.textContent = label || 'no session';
-      ringLabel.setAttribute('fill', '#444444');
+      ringLabel.setAttribute('fill', '#3a3a3a');
     }
-    // Start clock ticking in the center
-    if (!clockInterval) {
-      updateClock();
-      clockInterval = setInterval(updateClock, 1000);
-    }
+    if (!clockInterval) { updateClock(); clockInterval = setInterval(updateClock, 1000); }
   }
 
-  // ── Main render ──────────────────────────────────────────────────────────────
+  // ── Main render ─────────────────────────────────────────────────────────────
   function render() {
     if (!state) return;
-    const { settings, local, focusTabCount } = state;
+    const { settings, local, focusTabCount, liveTodayMinutes } = state;
     const now = Date.now();
     const isSnoozed      = settings.snoozeUntil && now < settings.snoozeUntil;
     const isBlocking     = local.blocking;
@@ -133,67 +128,83 @@ document.addEventListener('DOMContentLoaded', () => {
     const isFocusSession = focusSession && now < focusSession.endTime;
     const isHardcore     = isFocusSession && focusSession.hardcore;
 
-    // ── Status card ────────────────────────────────────────────────────────────
+    // ── Streak ────────────────────────────────────────────────────────────────
+    streakNum.textContent = local.currentStreak || 0;
+
+    // ── Daily progress ────────────────────────────────────────────────────────
+    const goal = settings.dailyGoal || 120;
+    const todayMins = liveTodayMinutes || 0;
+    const pct = Math.min(100, Math.round((todayMins / goal) * 100));
+    const goalReached = todayMins >= goal;
+    dailyFill.style.width = `${pct}%`;
+    dailyFill.classList.toggle('complete', goalReached);
+    dailyVal.textContent = goalReached ? `${todayMins}m done!` : `${todayMins} / ${goal}m`;
+    dailyVal.classList.toggle('complete', goalReached);
+
+    // ── Today stats ───────────────────────────────────────────────────────────
+    if (todayMins >= 60) {
+      const hrs = Math.floor(todayMins / 60);
+      const mins = todayMins % 60;
+      todayTime.textContent = mins > 0 ? `${hrs}h${mins}m` : `${hrs}h`;
+    } else {
+      todayTime.textContent = `${todayMins}m`;
+    }
+    todayBlocks.textContent = local.todayBlocks || 0;
+    todaySolved.textContent = local.todaySolved || 0;
+
+    // ── Status bar ────────────────────────────────────────────────────────────
     if (isSnoozed) {
       const remaining = Math.ceil((settings.snoozeUntil - now) / 60000);
-      statusCard.className         = 'status-card snoozed';
-      statusMain.className         = 'status-main snoozed';
-      statusState.className        = 'status-pill snoozed';
-      statusStateText.textContent  = 'Snoozed';
-      statusMain.textContent       = 'Snoozed';
-      statusSub.textContent        = `${remaining} min remaining`;
-      footerNote.textContent       = 'AI blocking paused';
-      snoozeRow.style.display      = 'block';
-      snoozeBtn.className          = 'snooze-btn end-snooze';
+      statusDot.className   = 'status-dot snoozed';
+      statusLabel.textContent = 'Snoozed';
+      statusSub.textContent = `${remaining}m remaining`;
+      statusBadge.className = 'status-badge snoozed';
+      statusBadge.textContent = 'Paused';
+      footerNote.textContent = 'AI blocking paused';
+      snoozeRow.style.display = 'block';
+      snoozeBtn.className = 'snooze-btn end-snooze';
       setSnoozeBtn('End Snooze');
-      snoozeBtn.dataset.action     = 'unsnooze';
+      snoozeBtn.dataset.action = 'unsnooze';
 
     } else if (isFocusSession) {
-      statusCard.className         = 'status-card session';
-      statusMain.className         = 'status-main session';
-      statusState.className        = 'status-pill session';
-      statusStateText.textContent  = isHardcore ? 'Hardcore' : 'Session';
-      statusMain.textContent       = isHardcore ? 'Hardcore Mode' : 'Focus Session';
+      statusDot.className   = 'status-dot session';
+      statusLabel.textContent = isHardcore ? 'Hardcore Mode' : 'Focus Session';
       const minsLeft = Math.ceil((focusSession.endTime - now) / 60000);
-      statusSub.textContent        = `${minsLeft}m remaining`;
-      footerNote.textContent       = isHardcore
-        ? 'hardcore — no snooze, no exit'
-        : 'end session to stop blocking';
-      snoozeRow.style.display      = isHardcore ? 'none' : 'block';
+      statusSub.textContent = `${minsLeft}m left`;
+      statusBadge.className = 'status-badge session';
+      statusBadge.textContent = isHardcore ? 'Locked' : 'Active';
+      footerNote.textContent = isHardcore ? 'no snooze, no exit' : 'end session to stop blocking';
+      snoozeRow.style.display = isHardcore ? 'none' : 'block';
       if (!isHardcore) {
-        const dur = settings.snoozeDuration || 15;
-        snoozeBtn.className        = 'snooze-btn';
-        setSnoozeBtn(`Snooze ${dur}m`);
-        snoozeBtn.dataset.action   = 'snooze';
+        snoozeBtn.className = 'snooze-btn';
+        setSnoozeBtn(`Snooze ${settings.snoozeDuration || 15}m`);
+        snoozeBtn.dataset.action = 'snooze';
       }
 
     } else if (isBlocking) {
-      statusCard.className         = 'status-card active';
-      statusMain.className         = 'status-main active';
-      statusState.className        = 'status-pill active';
-      statusStateText.textContent  = 'Blocking';
-      statusMain.textContent       = 'Focus Mode On';
       const count = focusTabCount || 0;
-      statusSub.textContent        = `${count} focus tab${count !== 1 ? 's' : ''} open`;
-      footerNote.textContent       = 'close focus tab to deactivate';
-      snoozeRow.style.display      = 'block';
-      const dur = settings.snoozeDuration || 15;
-      snoozeBtn.className          = 'snooze-btn';
-      setSnoozeBtn(`Snooze ${dur}m`);
-      snoozeBtn.dataset.action     = 'snooze';
+      statusDot.className   = 'status-dot active';
+      statusLabel.textContent = 'Focus Mode';
+      statusSub.textContent = `${count} focus tab${count !== 1 ? 's' : ''} open`;
+      statusBadge.className = 'status-badge active';
+      statusBadge.textContent = 'Blocking';
+      footerNote.textContent = 'close focus tabs to deactivate';
+      snoozeRow.style.display = 'block';
+      snoozeBtn.className = 'snooze-btn';
+      setSnoozeBtn(`Snooze ${settings.snoozeDuration || 15}m`);
+      snoozeBtn.dataset.action = 'snooze';
 
     } else {
-      statusCard.className         = 'status-card inactive';
-      statusMain.className         = 'status-main inactive';
-      statusState.className        = 'status-pill inactive';
-      statusStateText.textContent  = 'All clear';
-      statusMain.textContent       = 'All clear';
-      statusSub.textContent        = 'no focus tabs detected';
-      footerNote.textContent       = 'open a focus platform to activate';
-      snoozeRow.style.display      = 'none';
+      statusDot.className   = 'status-dot inactive';
+      statusLabel.textContent = 'All clear';
+      statusSub.textContent = 'no focus tabs detected';
+      statusBadge.className = 'status-badge inactive';
+      statusBadge.textContent = 'Idle';
+      footerNote.textContent = 'open a focus platform to activate';
+      snoozeRow.style.display = 'none';
     }
 
-    // ── Session section ────────────────────────────────────────────────────────
+    // ── Session section ───────────────────────────────────────────────────────
     sessionIdle.style.display   = isFocusSession ? 'none' : 'block';
     sessionActive.style.display = isFocusSession ? 'block' : 'none';
 
@@ -201,7 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderRing(focusSession.endTime, focusSession.duration, now);
       if (ringLabel) {
         ringLabel.textContent = isHardcore ? 'hardcore' : 'session';
-        ringLabel.setAttribute('fill', '#555555');
+        ringLabel.setAttribute('fill', '#555');
       }
       hardcoreBadge.style.display = isHardcore ? 'flex' : 'none';
       endSessionBtn.style.display = isHardcore ? 'none' : 'block';
@@ -226,11 +237,9 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
       if (endCountdown !== null) { clearInterval(endCountdown); endCountdown = null; }
-      // Reset ring to idle (spinning clock)
       const idleLabel = isSnoozed ? 'snoozed' : isBlocking ? 'blocking' : 'focus watch';
       resetRing(idleLabel);
     }
-
   }
 
   function loadState() {
@@ -241,59 +250,82 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   loadState();
-  setInterval(loadState, 30000);
+  pollInterval = setInterval(loadState, 5000);
 
-  // ── Snooze ───────────────────────────────────────────────────────────────────
-  snoozeBtn.addEventListener('click', () => {
-    const action  = snoozeBtn.dataset.action;
-    const type    = action === 'unsnooze' ? 'UNSNOOZE' : 'SNOOZE';
-    const payload = type === 'SNOOZE'
-      ? { type, minutes: state?.settings?.snoozeDuration || 15 }
-      : { type };
-    chrome.runtime.sendMessage(payload, () => { void chrome.runtime.lastError; loadState(); });
-  });
+  // ── Snooze ──────────────────────────────────────────────────────────────────
+  if (snoozeBtn) {
+    snoozeBtn.addEventListener('click', () => {
+      const action = snoozeBtn.dataset.action;
+      const type = action === 'unsnooze' ? 'UNSNOOZE' : 'SNOOZE';
+      const payload = type === 'SNOOZE'
+        ? { type, minutes: state?.settings?.snoozeDuration || 15 }
+        : { type };
+      chrome.runtime.sendMessage(payload, () => { void chrome.runtime.lastError; loadState(); });
+    });
+  }
 
-  // ── Start session ─────────────────────────────────────────────────────────────
-  startSessionBtn.addEventListener('click', () => {
-    const hardcore = hardcoreToggle.checked;
-    startSessionBtn.disabled = true;
-    chrome.runtime.sendMessage(
-      { type: 'START_SESSION', duration: selectedDuration, hardcore },
-      () => { void chrome.runtime.lastError; startSessionBtn.disabled = false; loadState(); }
-    );
-  });
+  // ── Start session ───────────────────────────────────────────────────────────
+  if (startSessionBtn) {
+    startSessionBtn.addEventListener('click', () => {
+      const hardcore = hardcoreToggle ? hardcoreToggle.checked : false;
+      startSessionBtn.disabled = true;
+      startSessionBtn.textContent = 'Starting\u2026';
+      chrome.runtime.sendMessage(
+        { type: 'START_SESSION', duration: selectedDuration, hardcore },
+        () => {
+          void chrome.runtime.lastError;
+          startSessionBtn.disabled = false;
+          startSessionBtn.textContent = 'Start Focus Session';
+          loadState();
+        }
+      );
+    });
+  }
 
-  // ── End session — anti-cheat: 8-second countdown ──────────────────────────────
-  endSessionBtn.addEventListener('click', () => {
-    if (endCountdown !== null) {
-      clearInterval(endCountdown);
-      endCountdown = null;
-      endSessionBtn.textContent = 'End Session';
-      endSessionBtn.classList.remove('confirming');
-      return;
-    }
-    let count = 8;
-    endSessionBtn.classList.add('confirming');
-    endSessionBtn.textContent = `Are you sure? Click to cancel (${count}s)`;
-    endCountdown = setInterval(() => {
-      count--;
-      if (count <= 0) {
+  // ── End session — 8s countdown ──────────────────────────────────────────────
+  if (endSessionBtn) {
+    endSessionBtn.addEventListener('click', () => {
+      if (endCountdown !== null) {
         clearInterval(endCountdown);
         endCountdown = null;
-        chrome.runtime.sendMessage({ type: 'END_SESSION' }, () => {
-          void chrome.runtime.lastError;
-          endSessionBtn.classList.remove('confirming');
-          endSessionBtn.textContent = 'End Session';
-          loadState();
-        });
-      } else {
-        endSessionBtn.textContent = `Are you sure? Click to cancel (${count}s)`;
+        endSessionBtn.textContent = 'End Session';
+        endSessionBtn.classList.remove('confirming');
+        return;
       }
-    }, 1000);
-  });
+      let count = 8;
+      endSessionBtn.classList.add('confirming');
+      endSessionBtn.textContent = `Sure? Cancel in ${count}s`;
+      endCountdown = setInterval(() => {
+        count--;
+        if (count <= 0) {
+          clearInterval(endCountdown);
+          endCountdown = null;
+          endSessionBtn.disabled = true;
+          chrome.runtime.sendMessage({ type: 'END_SESSION' }, () => {
+            void chrome.runtime.lastError;
+            endSessionBtn.disabled = false;
+            endSessionBtn.classList.remove('confirming');
+            endSessionBtn.textContent = 'End Session';
+            loadState();
+          });
+        } else {
+          endSessionBtn.textContent = `Sure? Cancel in ${count}s`;
+        }
+      }, 1000);
+    });
+  }
 
-  // ── Settings ─────────────────────────────────────────────────────────────────
-  document.getElementById('settingsBtn').addEventListener('click', () => {
-    chrome.runtime.openOptionsPage();
+  // ── Settings ────────────────────────────────────────────────────────────────
+  const settingsBtn = document.getElementById('settingsBtn');
+  if (settingsBtn) {
+    settingsBtn.addEventListener('click', () => chrome.runtime.openOptionsPage());
+  }
+
+  // ── Cleanup ─────────────────────────────────────────────────────────────────
+  window.addEventListener('unload', () => {
+    if (timerInterval) clearInterval(timerInterval);
+    if (clockInterval) clearInterval(clockInterval);
+    if (pollInterval) clearInterval(pollInterval);
+    if (endCountdown !== null) clearInterval(endCountdown);
   });
 });

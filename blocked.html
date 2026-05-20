@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Focus Mode — CF Focus</title>
+  <title>Focus Mode &mdash; CF Focus</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
@@ -18,11 +18,16 @@
       --red:   #c8191c;
       --red-d: rgba(200,25,28,0.08);
       --red-m: rgba(200,25,28,0.22);
-      --white: #ffffff;
+      --amber: #f59e0b;
+      --amber-d: rgba(245,158,11,0.08);
+      --amber-m: rgba(245,158,11,0.22);
+      --green: #22c55e;
+      --green-d: rgba(34,197,94,0.08);
+      --green-m: rgba(34,197,94,0.22);
       --text:  #f0f0f0;
       --text2: #777777;
       --muted: #333333;
-      --dim: rgba(255,255,255,0.08);
+      --dim:   rgba(255,255,255,0.08);
       --mono:  'JetBrains Mono', monospace;
       --sans:  'Inter', sans-serif;
     }
@@ -39,53 +44,30 @@
       padding: 48px 24px;
     }
 
-    /* Subtle radial glow at top */
     body::before {
       content: '';
       position: fixed;
-      top: 0; left: 50%;
-      transform: translateX(-50%);
+      top: 0; left: 50%; transform: translateX(-50%);
       width: 700px; height: 280px;
       background: radial-gradient(ellipse at 50% 0%, rgba(200,25,28,0.05) 0%, transparent 70%);
       pointer-events: none;
     }
 
-    .container {
-      max-width: 460px;
-      width: 100%;
-      position: relative;
-      z-index: 1;
-    }
+    .container { max-width: 520px; width: 100%; position: relative; z-index: 1; }
 
-    /* ── Top bar ── */
+    /* ── Topbar ── */
     .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 44px;
-    }
-
-    .brand { display: flex; align-items: center; gap: 10px; }
-
-    .brand-logo {
-      width: 28px; height: 28px;
-      background: #ffffff;
-      border-radius: 7px;
       display: flex; align-items: center; justify-content: center;
-      font-family: var(--mono);
-      font-weight: 700;
-      font-size: 11px;
-      color: #000000;
-      letter-spacing: -0.5px;
-      flex-shrink: 0;
+      margin-bottom: 36px;
     }
-
-    .brand-name {
-      font-size: 14px;
-      font-weight: 700;
-      letter-spacing: -0.3px;
-      color: var(--text);
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-logo {
+      width: 28px; height: 28px; background: #fff; border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-weight: 700; font-size: 11px;
+      color: #000; letter-spacing: -0.5px; flex-shrink: 0;
     }
+    .brand-name { font-size: 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--text); }
 
     /* ── Session card ── */
     #sessionCard {
@@ -93,229 +75,220 @@
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,255,255,0.1);
       border-radius: 14px;
-      padding: 18px 22px;
-      margin-bottom: 32px;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
+      padding: 18px 22px; margin-bottom: 28px;
+      align-items: center; justify-content: space-between; gap: 16px;
     }
-
-    .session-card-left {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
-
+    .session-card-left { display: flex; flex-direction: column; gap: 5px; }
     .session-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      font-family: var(--mono);
-      font-size: 9px;
-      font-weight: 600;
-      letter-spacing: 0.8px;
-      text-transform: uppercase;
-      color: var(--text);
+      display: inline-flex; align-items: center; gap: 5px;
+      font-family: var(--mono); font-size: 9px; font-weight: 600;
+      letter-spacing: 0.8px; text-transform: uppercase; color: var(--text);
     }
-
     .session-dot {
-      width: 5px; height: 5px;
-      border-radius: 50%;
-      background: #ffffff;
+      width: 5px; height: 5px; border-radius: 50%; background: #fff;
       animation: breathe 2s ease-in-out infinite;
     }
-
-    @keyframes breathe {
-      0%, 100% { opacity: 1; }
-      50%       { opacity: 0.35; }
-    }
-
-    .session-card-sub {
-      font-size: 11px;
-      color: var(--text2);
-      font-family: var(--mono);
-    }
-
+    @keyframes breathe { 0%,100%{opacity:1} 50%{opacity:0.35} }
+    .session-card-sub { font-size: 11px; color: var(--text2); font-family: var(--mono); }
     .session-timer-big {
-      font-family: var(--mono);
-      font-size: 40px;
-      font-weight: 700;
-      color: #ffffff;
-      letter-spacing: -2px;
-      line-height: 1;
-      flex-shrink: 0;
+      font-family: var(--mono); font-size: 40px; font-weight: 700;
+      color: #fff; letter-spacing: -2px; line-height: 1; flex-shrink: 0;
     }
-
     .hc-badge {
-      display: none;
-      align-items: center;
-      gap: 5px;
-      font-family: var(--mono);
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      color: var(--red);
-      background: var(--red-d);
-      border: 1px solid var(--red-m);
-      padding: 3px 9px;
-      border-radius: 100px;
-      width: fit-content;
+      display: none; align-items: center; gap: 5px;
+      font-family: var(--mono); font-size: 9px; font-weight: 700;
+      letter-spacing: 0.5px; text-transform: uppercase;
+      color: var(--red); background: var(--red-d);
+      border: 1px solid var(--red-m); padding: 3px 9px;
+      border-radius: 100px; width: fit-content;
     }
 
-    /* ── Stop icon ── */
-    .stop-icon {
-      width: 64px; height: 64px;
-      background: var(--red-d);
-      border: 1px solid var(--red-m);
-      border-radius: 18px;
-      display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 24px;
-      color: var(--red);
+    /* ── Hint progress timeline ─────────────────────────── */
+    .hint-timeline {
+      background: var(--s1); border: 1px solid var(--b1);
+      border-radius: 14px; padding: 20px 22px;
+      margin-bottom: 24px;
     }
-
-    /* ── Headline ── */
-    h1 {
-      font-size: 32px;
-      font-weight: 700;
-      letter-spacing: -1.3px;
-      line-height: 1.05;
+    .hint-timeline-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .hint-timeline-title {
+      font-family: var(--mono); font-size: 9px; font-weight: 600;
+      letter-spacing: 1.2px; text-transform: uppercase; color: var(--text2);
+    }
+    .hint-elapsed {
+      font-family: var(--mono); font-size: 12px; font-weight: 700;
       color: var(--text);
-      margin-bottom: 10px;
-      text-align: center;
     }
 
-    .headline-accent { color: var(--red); }
-
-    /* ── Subtitle ── */
-    .subtitle {
-      font-size: 15px;
-      color: var(--text2);
-      line-height: 1.65;
-      text-align: center;
-      margin-bottom: 10px;
+    /* Track bar */
+    .hint-track {
+      position: relative; height: 6px; background: var(--b2);
+      border-radius: 3px; overflow: hidden; margin-bottom: 16px;
     }
+    .hint-track-fill {
+      height: 100%; border-radius: 3px;
+      transition: width 0.5s ease, background 0.3s ease;
+    }
+    .hint-track-fill.t0 { background: var(--red); }
+    .hint-track-fill.t1 { background: var(--amber); }
+    .hint-track-fill.t2 { background: var(--amber); }
+    .hint-track-fill.t3 { background: var(--green); }
 
-    /* ── Site badge ── */
-    #siteBadgeWrap {
+    /* Tier steps */
+    .hint-steps {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+    }
+    .hint-step {
+      text-align: center; padding: 10px 4px;
+      border-radius: 10px; border: 1px solid var(--b1);
+      background: var(--bg); transition: all 0.3s;
+    }
+    .hint-step.active {
+      border-color: var(--amber-m); background: var(--amber-d);
+    }
+    .hint-step.active.t0 {
+      border-color: var(--red-m); background: var(--red-d);
+    }
+    .hint-step.active.t3 {
+      border-color: var(--green-m); background: var(--green-d);
+    }
+    .hint-step-icon {
+      font-size: 18px; margin-bottom: 4px; line-height: 1;
+      filter: grayscale(1) opacity(0.3);
+      transition: filter 0.3s;
+    }
+    .hint-step.reached .hint-step-icon,
+    .hint-step.active .hint-step-icon { filter: none; }
+    .hint-step-label {
+      font-family: var(--mono); font-size: 9px; font-weight: 600;
+      letter-spacing: 0.5px; text-transform: uppercase;
+      color: var(--muted); transition: color 0.3s;
+    }
+    .hint-step.reached .hint-step-label { color: var(--text2); }
+    .hint-step.active .hint-step-label { color: var(--text); }
+    .hint-step-time {
+      font-family: var(--mono); font-size: 10px; color: var(--muted);
+      margin-top: 2px; transition: color 0.3s;
+    }
+    .hint-step.reached .hint-step-time,
+    .hint-step.active .hint-step-time { color: var(--text2); }
+
+    /* ── Current tier content card ──────────────────────── */
+    .tier-card {
       display: none;
-      text-align: center;
-      margin-bottom: 28px;
+      background: var(--s1); border: 1px solid var(--b1);
+      border-radius: 14px; padding: 22px 24px;
+      margin-bottom: 24px;
+      transition: border-color 0.3s;
     }
+    .tier-card.visible { display: block; }
+    .tier-card.t1 { border-color: var(--amber-m); }
+    .tier-card.t2 { border-color: var(--amber-m); }
+    .tier-card.t3 { border-color: var(--green-m); }
 
-    #siteBadge {
-      display: inline-block;
-      background: var(--red-d);
-      border: 1px solid var(--red-m);
-      border-radius: 100px;
-      padding: 4px 12px;
-      font-family: var(--mono);
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--red);
-      letter-spacing: 0.3px;
+    .tier-card-header {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 12px;
     }
-
-    /* ── Quote card ── */
-    .quote-wrap {
-      background: var(--s1);
-      border: 1px solid var(--b1);
-      border-radius: 14px;
-      padding: 20px 22px;
-      margin-bottom: 28px;
-      text-align: left;
+    .tier-card-badge {
+      font-family: var(--mono); font-size: 9px; font-weight: 700;
+      letter-spacing: 0.8px; text-transform: uppercase;
+      padding: 3px 10px; border-radius: 100px;
     }
-
-    .quote-eyebrow {
-      font-family: var(--mono);
-      font-size: 9px;
-      font-weight: 600;
-      letter-spacing: 1.3px;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 10px;
-    }
-
-    .quote-text {
-      font-size: 13px;
-      color: var(--text2);
-      line-height: 1.8;
-      font-style: italic;
-    }
-
-    /* ── Actions ── */
-    .actions {
-      display: flex;
-      flex-direction: column;
-      gap: 9px;
-      margin-bottom: 28px;
-    }
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 7px;
-      font-family: var(--sans);
-      font-size: 13px;
-      font-weight: 600;
-      padding: 13px 22px;
-      border-radius: 10px;
-      cursor: pointer;
-      text-decoration: none;
-      border: none;
-      transition: all 0.15s ease;
-    }
-    .btn:active { transform: scale(0.97); }
-
-    .btn-primary {
-      background: #ffffff;
-      color: #000000;
-    }
-    .btn-primary:hover { background: #e8e8e8; }
-
-    .btn-solved {
-      background: rgba(255,255,255,0.05);
-      color: var(--text);
-      border: 1px solid rgba(255,255,255,0.15);
-      font-weight: 500;
-    }
-    .btn-solved:hover {
-      background: rgba(255,255,255,0.1);
-      border-color: rgba(255,255,255,0.3);
-    }
-
-    /* ── Success state ── */
-    .success-msg {
-      display: none;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 12px;
-      padding: 18px 22px;
-      text-align: center;
-      margin-bottom: 28px;
-    }
-
-    .success-msg-title {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 5px;
+    .tier-card-badge.t1 { background: var(--amber-d); color: var(--amber); border: 1px solid var(--amber-m); }
+    .tier-card-badge.t2 { background: var(--amber-d); color: var(--amber); border: 1px solid var(--amber-m); }
+    .tier-card-badge.t3 { background: var(--green-d); color: var(--green); border: 1px solid var(--green-m); }
+    .tier-card-title {
+      font-size: 15px; font-weight: 700; color: var(--text);
       letter-spacing: -0.3px;
     }
+    .tier-card-body {
+      font-size: 13px; color: var(--text2); line-height: 1.7;
+    }
+    .tier-card-body strong { color: var(--text); font-weight: 600; }
 
-    .success-msg-sub {
-      font-size: 12px;
-      color: var(--text2);
-      font-family: var(--mono);
+    .btn-unlock-ai {
+      display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+      width: 100%; margin-top: 16px; padding: 13px;
+      background: var(--green); border: none; border-radius: 10px;
+      color: #000; font-family: var(--sans); font-size: 13px; font-weight: 700;
+      cursor: pointer; transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn-unlock-ai:hover { opacity: 0.85; }
+    .btn-unlock-ai:active { transform: scale(0.97); }
+    .btn-unlock-ai:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── Headline ── */
+    .stop-icon {
+      width: 56px; height: 56px;
+      background: var(--red-d); border: 1px solid var(--red-m);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px; color: var(--red);
+    }
+    h1 {
+      font-size: 28px; font-weight: 700;
+      letter-spacing: -1px; line-height: 1.1;
+      color: var(--text); margin-bottom: 8px; text-align: center;
+    }
+    .headline-accent { color: var(--red); }
+    .subtitle {
+      font-size: 14px; color: var(--text2); line-height: 1.6;
+      text-align: center; margin-bottom: 8px;
+    }
+    #siteBadgeWrap { display: none; text-align: center; margin-bottom: 20px; }
+    #siteBadge {
+      display: inline-block;
+      background: var(--red-d); border: 1px solid var(--red-m);
+      border-radius: 100px; padding: 4px 12px;
+      font-family: var(--mono); font-size: 11px; font-weight: 600;
+      color: var(--red); letter-spacing: 0.3px;
     }
 
-    /* ── Footer note ── */
+    /* ── Quote ── */
+    .quote-wrap {
+      background: var(--s1); border: 1px solid var(--b1);
+      border-radius: 14px; padding: 18px 20px;
+      margin-bottom: 24px; text-align: left;
+    }
+    .quote-eyebrow {
+      font-family: var(--mono); font-size: 9px; font-weight: 600;
+      letter-spacing: 1.3px; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 8px;
+    }
+    .quote-text { font-size: 13px; color: var(--text2); line-height: 1.7; font-style: italic; }
+
+    /* ── Actions ── */
+    .actions { display: flex; flex-direction: column; gap: 9px; margin-bottom: 24px; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+      font-family: var(--sans); font-size: 13px; font-weight: 600;
+      padding: 12px 22px; border-radius: 10px; cursor: pointer;
+      text-decoration: none; border: none; transition: all 0.15s ease;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: #fff; color: #000; }
+    .btn-primary:hover { background: #e8e8e8; }
+    .btn-solved {
+      background: rgba(255,255,255,0.05); color: var(--text);
+      border: 1px solid rgba(255,255,255,0.15); font-weight: 500;
+    }
+    .btn-solved:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); }
+
+    .success-msg {
+      display: none;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px; padding: 18px 22px;
+      text-align: center; margin-bottom: 24px;
+    }
+    .success-msg-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 5px; letter-spacing: -0.3px; }
+    .success-msg-sub { font-size: 12px; color: var(--text2); font-family: var(--mono); }
+
     .footer-note {
-      text-align: center;
-      font-family: var(--mono);
-      font-size: 10px;
-      color: var(--muted);
+      text-align: center; font-family: var(--mono);
+      font-size: 10px; color: var(--muted);
     }
   </style>
 </head>
@@ -329,7 +302,7 @@
       </div>
     </div>
 
-    <!-- Session timer card — shown when a focus session is active -->
+    <!-- Session timer card -->
     <div id="sessionCard">
       <div class="session-card-left">
         <div class="session-pill">
@@ -337,36 +310,118 @@
           Focus Session
         </div>
         <div class="session-card-sub">remaining in session</div>
-        <div class="hc-badge" id="hcBadge">
-          Hardcore &mdash; stay strong
-        </div>
+        <div class="hc-badge" id="hcBadge">Hardcore &mdash; stay strong</div>
       </div>
       <div class="session-timer-big" id="sessionTimerBig">--:--</div>
     </div>
 
-    <!-- Stop icon -->
-    <div class="stop-icon">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+    <!-- Stop icon + headline -->
+    <div class="stop-icon" id="stopIcon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
         <circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.6"/>
         <rect x="8.5" y="8.5" width="7" height="7" rx="1" fill="currentColor" opacity="0.85"/>
       </svg>
     </div>
 
-    <h1>Solve it <span class="headline-accent">yourself.</span></h1>
+    <h1 id="mainHeadline">Solve it <span class="headline-accent">yourself.</span></h1>
 
     <p class="subtitle" id="subText">
       You're about to use AI.<br>Try harder first &mdash; that struggle is where growth lives.
     </p>
 
-    <div id="siteBadgeWrap">
-      <span id="siteBadge"></span>
+    <div id="siteBadgeWrap"><span id="siteBadge"></span></div>
+
+    <!-- ═══════ HINT TIMELINE ═══════ -->
+    <div class="hint-timeline" id="hintTimeline">
+      <div class="hint-timeline-header">
+        <span class="hint-timeline-title">Progressive Unlock</span>
+        <span class="hint-elapsed" id="hintElapsedText">0m focused</span>
+      </div>
+      <div class="hint-track">
+        <div class="hint-track-fill t0" id="hintTrackFill" style="width:0%"></div>
+      </div>
+      <div class="hint-steps" id="hintSteps">
+        <div class="hint-step active t0" data-tier="0">
+          <div class="hint-step-icon">&#x1F6D1;</div>
+          <div class="hint-step-label">Blocked</div>
+          <div class="hint-step-time" id="tierTime0">&lt;15m</div>
+        </div>
+        <div class="hint-step" data-tier="1">
+          <div class="hint-step-icon">&#x1F4A1;</div>
+          <div class="hint-step-label">Hint 1</div>
+          <div class="hint-step-time" id="tierTime1">15m</div>
+        </div>
+        <div class="hint-step" data-tier="2">
+          <div class="hint-step-icon">&#x1F50D;</div>
+          <div class="hint-step-label">Hint 2</div>
+          <div class="hint-step-time" id="tierTime2">25m</div>
+        </div>
+        <div class="hint-step" data-tier="3">
+          <div class="hint-step-icon">&#x2705;</div>
+          <div class="hint-step-label">Unlock</div>
+          <div class="hint-step-time" id="tierTime3">35m</div>
+        </div>
+      </div>
     </div>
 
-    <div class="quote-wrap">
+    <!-- Tier 1 card: general approach hint -->
+    <div class="tier-card t1" id="tierCard1">
+      <div class="tier-card-header">
+        <span class="tier-card-badge t1">Hint 1</span>
+        <span class="tier-card-title">Think about the approach</span>
+      </div>
+      <div class="tier-card-body">
+        <strong>Questions to guide you:</strong><br>
+        &bull; What data structure fits this problem? (array, stack, map, tree, graph?)<br>
+        &bull; Have you seen a similar pattern before? (two pointers, sliding window, binary search?)<br>
+        &bull; What's the brute force? Can you optimize from there?<br>
+        &bull; Try writing pseudocode before real code.
+      </div>
+    </div>
+
+    <!-- Tier 2 card: deeper algorithmic hint -->
+    <div class="tier-card t2" id="tierCard2">
+      <div class="tier-card-header">
+        <span class="tier-card-badge t2">Hint 2</span>
+        <span class="tier-card-title">Narrow down the technique</span>
+      </div>
+      <div class="tier-card-body">
+        <strong>Dig deeper:</strong><br>
+        &bull; If the answer is monotonic, consider <strong>binary search on the answer</strong>.<br>
+        &bull; If you need range queries, think <strong>prefix sums or segment tree</strong>.<br>
+        &bull; If there are dependencies, think <strong>topological sort or DP</strong>.<br>
+        &bull; If constraints are small (N &le; 20), try <strong>bitmask/backtracking</strong>.<br>
+        &bull; Read the constraints carefully &mdash; they hint at the expected complexity.
+      </div>
+    </div>
+
+    <!-- Tier 3 card: earned AI access -->
+    <div class="tier-card t3" id="tierCard3">
+      <div class="tier-card-header">
+        <span class="tier-card-badge t3">Earned Access</span>
+        <span class="tier-card-title">You've put in the work</span>
+      </div>
+      <div class="tier-card-body">
+        You've struggled with this problem for a meaningful amount of time.
+        That effort is real learning. You've <strong>earned</strong> the right to use AI as a tool &mdash; not a crutch.<br><br>
+        Use it wisely: ask for <em>concepts</em>, not <em>solutions</em>.
+      </div>
+      <button class="btn-unlock-ai" id="unlockAiBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="11" width="18" height="12" rx="3" stroke="currentColor" stroke-width="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span id="unlockAiBtnLabel">Unlock AI for 10 minutes</span>
+      </button>
+    </div>
+
+    <!-- Quote -->
+    <div class="quote-wrap" id="quoteWrap">
       <div class="quote-eyebrow">Reminder</div>
       <p class="quote-text" id="quote"></p>
     </div>
 
+    <!-- Actions -->
     <div class="actions" id="actions">
       <button class="btn btn-primary" id="goBackBtn">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
@@ -378,7 +433,7 @@
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
           <path d="M2.5 8.5l3.5 3.5 7-8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        I solved it &mdash; unlock AI for 10 min
+        I solved it &mdash; unlock AI briefly
       </button>
     </div>
 

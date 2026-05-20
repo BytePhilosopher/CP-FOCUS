@@ -33,8 +33,10 @@ const DEFAULT_BLOCKED = [
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+const DEFAULT_HINT_TIERS = { hint1At: 15, hint2At: 25, unlockAt: 35, unlockMinutes: 10 };
+
 const DEFAULTS = {
-  enabledPlatforms: ['codeforces', 'leetcode', 'atcoder', 'hackerrank', 'codechef'],
+  enabledPlatforms: ['codeforces', 'leetcode', 'atcoder', 'hackerrank', 'codechef', 'cses'],
   disabledDefaults: [],
   customBlocklist: [],
   customPlatforms: [],
@@ -42,6 +44,9 @@ const DEFAULTS = {
   snoozeDuration: 15,
   schedule: { enabled: false, days: [1, 2, 3, 4, 5], startHour: 9, endHour: 21 },
   pin: null,
+  dailyGoal: 120,
+  breakReminder: 50,
+  hintTiers: { ...DEFAULT_HINT_TIERS },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -57,7 +62,9 @@ function getStats() {
 }
 function saveSettings(partial) {
   return new Promise(resolve => chrome.storage.sync.set(partial, () => {
-    chrome.runtime.sendMessage({ type: 'SETTINGS_CHANGED' });
+    chrome.runtime.sendMessage({ type: 'SETTINGS_CHANGED' }, () => {
+      void chrome.runtime.lastError;
+    });
     resolve();
   }));
 }
@@ -118,9 +125,73 @@ async function loadAll() {
   renderDefaultSites(settings);
   renderCustomList(settings.customBlocklist);
   renderSnooze(settings);
+  renderDailyGoal(settings);
+  renderBreakReminder(settings);
   renderSchedule(settings);
+  renderHintTiers(settings);
   renderPin(settings);
   renderStats(stats);
+}
+
+function renderHintTiers(settings) {
+  const tiers = { ...DEFAULT_HINT_TIERS, ...(settings.hintTiers || {}) };
+  const h1  = document.getElementById('hint1AtInput');
+  const h2  = document.getElementById('hint2AtInput');
+  const un  = document.getElementById('unlockAtInput');
+  const dur = document.getElementById('unlockMinutesInput');
+  const msg = document.getElementById('hintTierMsg');
+  if (!h1) return;
+
+  h1.value  = tiers.hint1At;
+  h2.value  = tiers.hint2At;
+  un.value  = tiers.unlockAt;
+  dur.value = tiers.unlockMinutes;
+
+  function clamp(input, min, max) {
+    const v = Math.round(Number(input.value));
+    if (!Number.isFinite(v)) return null;
+    return Math.min(max, Math.max(min, v));
+  }
+
+  async function save() {
+    const v1  = clamp(h1, 1, 240);
+    const v2  = clamp(h2, 1, 240);
+    const v3  = clamp(un, 1, 240);
+    const vd  = clamp(dur, 1, 60);
+    msg.className = 'hint-tier-msg';
+    msg.textContent = '';
+    if (v1 === null || v2 === null || v3 === null || vd === null) {
+      msg.textContent = 'All values must be whole numbers.';
+      msg.className = 'hint-tier-msg err';
+      return;
+    }
+    if (!(v1 < v2 && v2 < v3)) {
+      msg.textContent = 'Hint 1 < Hint 2 < Unlock — please order thresholds correctly.';
+      msg.className = 'hint-tier-msg err';
+      return;
+    }
+    h1.value = v1; h2.value = v2; un.value = v3; dur.value = vd;
+    await saveSettings({ hintTiers: { hint1At: v1, hint2At: v2, unlockAt: v3, unlockMinutes: vd } });
+    msg.textContent = `Saved: hint 1 at ${v1}m · hint 2 at ${v2}m · unlock at ${v3}m (${vd}m unlock).`;
+    msg.className = 'hint-tier-msg ok';
+    flashSaved();
+  }
+
+  [h1, h2, un, dur].forEach(inp => {
+    inp.onchange = save;
+    inp.onkeydown = e => { if (e.key === 'Enter') save(); };
+  });
+
+  const resetBtn = document.getElementById('resetHintTiersBtn');
+  if (resetBtn) {
+    resetBtn.onclick = async () => {
+      h1.value  = DEFAULT_HINT_TIERS.hint1At;
+      h2.value  = DEFAULT_HINT_TIERS.hint2At;
+      un.value  = DEFAULT_HINT_TIERS.unlockAt;
+      dur.value = DEFAULT_HINT_TIERS.unlockMinutes;
+      await save();
+    };
+  }
 }
 
 function renderPlatforms(settings) {
@@ -162,27 +233,47 @@ function renderPlatforms(settings) {
 function renderCustomPlatforms(customPlatforms) {
   const list = document.getElementById('customPlatformList');
   if (!list) return;
-  list.innerHTML = '';
+  list.textContent = '';
 
   if (!customPlatforms.length) {
-    list.innerHTML = '<div class="cp-empty">No custom platforms added yet</div>';
+    const empty = document.createElement('div');
+    empty.className = 'cp-empty';
+    empty.textContent = 'No custom platforms added yet';
+    list.appendChild(empty);
     return;
   }
 
   for (const cp of customPlatforms) {
     const item = document.createElement('div');
     item.className = 'cp-item';
-    item.innerHTML = `
-      <div class="cp-item-badge">${cp.name.slice(0, 2).toUpperCase()}</div>
-      <div class="cp-item-info">
-        <div class="cp-item-name">${cp.name}</div>
-        <div class="cp-item-domain">${cp.domain}</div>
-      </div>
-      <button class="cp-item-remove" data-remove="${cp.domain}" title="Remove">
-        <svg viewBox="0 0 10 10" fill="none" width="12" height="12">
-          <path d="M1.5 1.5l7 7M8.5 1.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        </svg>
-      </button>`;
+
+    const badge = document.createElement('div');
+    badge.className = 'cp-item-badge';
+    badge.textContent = (cp.name || '').slice(0, 2).toUpperCase();
+
+    const info = document.createElement('div');
+    info.className = 'cp-item-info';
+    const name = document.createElement('div');
+    name.className = 'cp-item-name';
+    name.textContent = cp.name;
+    const dom = document.createElement('div');
+    dom.className = 'cp-item-domain';
+    dom.textContent = cp.domain;
+    info.appendChild(name);
+    info.appendChild(dom);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'cp-item-remove';
+    removeBtn.title = 'Remove';
+    removeBtn.dataset.remove = cp.domain;
+    removeBtn.innerHTML =
+      '<svg viewBox="0 0 10 10" fill="none" width="12" height="12">' +
+      '<path d="M1.5 1.5l7 7M8.5 1.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>' +
+      '</svg>';
+
+    item.appendChild(badge);
+    item.appendChild(info);
+    item.appendChild(removeBtn);
     list.appendChild(item);
   }
 
@@ -296,15 +387,23 @@ function renderDefaultSites(settings) {
 
 function renderCustomList(customBlocklist) {
   const container = document.getElementById('customList');
-  container.innerHTML = '';
+  container.textContent = '';
   if (!customBlocklist.length) {
-    container.innerHTML = '<div class="custom-empty">No custom sites added</div>';
+    const empty = document.createElement('div');
+    empty.className = 'custom-empty';
+    empty.textContent = 'No custom sites added';
+    container.appendChild(empty);
     return;
   }
   for (const domain of customBlocklist) {
     const tag = document.createElement('span');
     tag.className = 'custom-tag';
-    tag.innerHTML = `${domain}<button data-remove="${domain}" title="Remove">×</button>`;
+    tag.appendChild(document.createTextNode(domain));
+    const btn = document.createElement('button');
+    btn.dataset.remove = domain;
+    btn.title = 'Remove';
+    btn.textContent = '×';
+    tag.appendChild(btn);
     container.appendChild(tag);
   }
 
@@ -331,6 +430,38 @@ function renderSnooze(settings) {
     chips.forEach(c => c.classList.remove('selected'));
     chip.classList.add('selected');
     await saveSettings({ snoozeDuration: Number(chip.dataset.dur) });
+    flashSaved();
+  };
+}
+
+function renderDailyGoal(settings) {
+  const current = settings.dailyGoal || 120;
+  const chips = document.querySelectorAll('#goalChips .snooze-chip');
+  chips.forEach(chip => {
+    chip.classList.toggle('selected', Number(chip.dataset.goal) === current);
+  });
+  document.getElementById('goalChips').onclick = async e => {
+    const chip = e.target.closest('[data-goal]');
+    if (!chip) return;
+    chips.forEach(c => c.classList.remove('selected'));
+    chip.classList.add('selected');
+    await saveSettings({ dailyGoal: Number(chip.dataset.goal) });
+    flashSaved();
+  };
+}
+
+function renderBreakReminder(settings) {
+  const current = settings.breakReminder != null ? settings.breakReminder : 50;
+  const chips = document.querySelectorAll('#breakChips .snooze-chip');
+  chips.forEach(chip => {
+    chip.classList.toggle('selected', Number(chip.dataset.break) === current);
+  });
+  document.getElementById('breakChips').onclick = async e => {
+    const chip = e.target.closest('[data-break]');
+    if (!chip) return;
+    chips.forEach(c => c.classList.remove('selected'));
+    chip.classList.add('selected');
+    await saveSettings({ breakReminder: Number(chip.dataset.break) });
     flashSaved();
   };
 }

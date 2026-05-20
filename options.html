@@ -326,6 +326,59 @@
     .snooze-chip:hover { border-color: var(--b2); color: var(--text2); background: var(--s2); }
     .snooze-chip.selected { background: #fff; border-color: #fff; color: #000; }
 
+    /* ── Hint tier rows ──────────────────────────────────────────── */
+    .hint-tier-grid {
+      display: flex; flex-direction: column;
+    }
+    .hint-tier-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 18px; gap: 16px;
+      border-bottom: 1px solid var(--b1);
+    }
+    .hint-tier-row:last-of-type { border-bottom: none; }
+    .hint-tier-info { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; }
+    .hint-tier-badge {
+      font-family: var(--mono); font-size: 9px; font-weight: 700;
+      letter-spacing: 0.8px; text-transform: uppercase;
+      padding: 4px 11px; border-radius: 100px;
+      background: rgba(255,255,255,0.04); color: var(--text2);
+      border: 1px solid var(--b1); flex-shrink: 0;
+    }
+    .hint-tier-badge.t1 { background: rgba(245,158,11,0.08); color: #f59e0b; border-color: rgba(245,158,11,0.22); }
+    .hint-tier-badge.t2 { background: rgba(245,158,11,0.08); color: #f59e0b; border-color: rgba(245,158,11,0.22); }
+    .hint-tier-badge.t3 { background: rgba(34,197,94,0.08); color: #22c55e; border-color: rgba(34,197,94,0.22); }
+    .hint-tier-desc { font-size: 13px; color: var(--text); }
+    .hint-tier-input-wrap {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--bg); border: 1px solid var(--b1); border-radius: 8px;
+      padding: 4px 10px; transition: border-color 0.15s;
+    }
+    .hint-tier-input-wrap:focus-within { border-color: #fff; }
+    .hint-tier-input {
+      width: 56px; background: transparent; border: none; outline: none;
+      color: var(--text); font-family: var(--mono); font-size: 14px;
+      font-weight: 600; text-align: right;
+      -moz-appearance: textfield;
+    }
+    .hint-tier-input::-webkit-outer-spin-button,
+    .hint-tier-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .hint-tier-unit {
+      font-family: var(--mono); font-size: 11px; color: var(--text2);
+      font-weight: 500;
+    }
+    .hint-tier-msg {
+      padding: 0 18px 12px; font-family: var(--mono); font-size: 11px;
+      min-height: 18px; color: var(--text2);
+    }
+    .hint-tier-msg.err { color: var(--red); }
+    .hint-tier-msg.ok  { color: #22c55e; }
+    .hint-tier-actions {
+      padding: 0 18px 16px; display: flex; gap: 8px;
+    }
+    .hint-tier-actions .snooze-chip {
+      flex: 0 0 auto; padding: 8px 14px; font-size: 11px;
+    }
+
     /* ── Blocked AI Sites header ─────────────────────────────────── */
     .sites-hdr {
       display: flex; align-items: center; justify-content: space-between;
@@ -862,6 +915,15 @@
         Schedule
       </div>
 
+      <div class="nav-item" data-view="hints">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
+          <path d="M8 1.5a4.5 4.5 0 0 0-2.5 8.3V12h5V9.8A4.5 4.5 0 0 0 8 1.5z"
+            stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+          <path d="M6 13.5h4M6.5 15h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+        Hints
+      </div>
+
       <div class="nav-item" data-view="security">
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
           <rect x="2" y="7" width="12" height="8" rx="2" stroke="currentColor" stroke-width="1.3"/>
@@ -873,7 +935,7 @@
     </nav>
 
     <div class="sidebar-footer">
-      <div class="sidebar-version">v2.0</div>
+      <div class="sidebar-version">v1.0.0</div>
     </div>
   </aside>
 
@@ -1033,6 +1095,52 @@
             </div>
           </div>
 
+          <!-- Daily Goal -->
+          <div>
+            <div class="section-label-row">
+              <span class="section-label">Daily Goal</span>
+              <div class="section-label-line"></div>
+            </div>
+            <div class="card">
+              <div class="row-setting">
+                <div class="row-left">
+                  <div class="row-label">Daily focus target</div>
+                  <div class="row-sub">Set a daily goal to stay motivated. Shown in the popup progress bar.</div>
+                </div>
+              </div>
+              <div class="snooze-chip-grid" id="goalChips">
+                <div class="snooze-chip" data-goal="30">30m</div>
+                <div class="snooze-chip" data-goal="60">1h</div>
+                <div class="snooze-chip selected" data-goal="120">2h</div>
+                <div class="snooze-chip" data-goal="180">3h</div>
+                <div class="snooze-chip" data-goal="240">4h</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Break Reminder -->
+          <div>
+            <div class="section-label-row">
+              <span class="section-label">Break Reminder</span>
+              <div class="section-label-line"></div>
+            </div>
+            <div class="card">
+              <div class="row-setting">
+                <div class="row-left">
+                  <div class="row-label">Remind me to take a break</div>
+                  <div class="row-sub">Get a notification after continuous focus. Set to Off to disable.</div>
+                </div>
+              </div>
+              <div class="snooze-chip-grid" id="breakChips">
+                <div class="snooze-chip" data-break="0">Off</div>
+                <div class="snooze-chip" data-break="25">25m</div>
+                <div class="snooze-chip selected" data-break="50">50m</div>
+                <div class="snooze-chip" data-break="90">90m</div>
+                <div class="snooze-chip" data-break="120">2h</div>
+              </div>
+            </div>
+          </div>
+
           <!-- Custom Platforms -->
           <div class="settings-full">
             <div class="section-label-row">
@@ -1161,6 +1269,82 @@
               <!-- Live preview -->
               <div class="sched-preview" id="schedPreview">Schedule not yet configured.</div>
 
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ── VIEW: Hints ── -->
+    <div class="view" id="view-hints">
+      <div class="view-header">
+        <div class="view-title">Progressive Hints</div>
+        <div class="view-sub">Earn hints — and eventually AI access — by struggling with a problem first</div>
+      </div>
+      <div class="wrap">
+        <div class="settings-wrap">
+
+          <div class="card">
+            <div class="row-setting" style="border-bottom: 1px solid var(--b1);">
+              <div class="row-left">
+                <div class="row-label">How progressive hints work</div>
+                <div class="row-sub">
+                  When you open a focus platform, a timer starts. The longer you struggle
+                  on the same problem, the more help you unlock — first a general
+                  approach hint, then a specific algorithmic hint, then optional AI access.
+                  This timer resets when you snooze, solve, or close all focus tabs.
+                </div>
+              </div>
+            </div>
+
+            <div class="hint-tier-grid" id="hintTierGrid">
+              <div class="hint-tier-row">
+                <div class="hint-tier-info">
+                  <div class="hint-tier-badge t1">Hint 1</div>
+                  <div class="hint-tier-desc">General approach hint unlocks after</div>
+                </div>
+                <div class="hint-tier-input-wrap">
+                  <input class="hint-tier-input" id="hint1AtInput" type="number" min="1" max="240" step="1">
+                  <span class="hint-tier-unit">min</span>
+                </div>
+              </div>
+              <div class="hint-tier-row">
+                <div class="hint-tier-info">
+                  <div class="hint-tier-badge t2">Hint 2</div>
+                  <div class="hint-tier-desc">Specific algorithmic hint unlocks after</div>
+                </div>
+                <div class="hint-tier-input-wrap">
+                  <input class="hint-tier-input" id="hint2AtInput" type="number" min="1" max="240" step="1">
+                  <span class="hint-tier-unit">min</span>
+                </div>
+              </div>
+              <div class="hint-tier-row">
+                <div class="hint-tier-info">
+                  <div class="hint-tier-badge t3">Unlock</div>
+                  <div class="hint-tier-desc">AI unlock button becomes available after</div>
+                </div>
+                <div class="hint-tier-input-wrap">
+                  <input class="hint-tier-input" id="unlockAtInput" type="number" min="1" max="240" step="1">
+                  <span class="hint-tier-unit">min</span>
+                </div>
+              </div>
+              <div class="hint-tier-row">
+                <div class="hint-tier-info">
+                  <div class="hint-tier-badge">Duration</div>
+                  <div class="hint-tier-desc">How long the AI unlock lasts</div>
+                </div>
+                <div class="hint-tier-input-wrap">
+                  <input class="hint-tier-input" id="unlockMinutesInput" type="number" min="1" max="60" step="1">
+                  <span class="hint-tier-unit">min</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="hint-tier-msg" id="hintTierMsg"></div>
+
+            <div class="hint-tier-actions">
+              <button class="snooze-chip" id="resetHintTiersBtn">Reset to defaults</button>
             </div>
           </div>
 

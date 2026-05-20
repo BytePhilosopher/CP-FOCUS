@@ -1,14 +1,16 @@
 {
   "manifest_version": 3,
   "name": "CF Focus — AI Blocker for Competitive Programming",
-  "version": "2.0",
-  "description": "Blocks AI websites when you're on competitive programming platforms. Multi-platform, customizable, with focus stats.",
+  "version": "1.0.0",
+  "description": "Blocks AI chatbots while you're on Codeforces, LeetCode, AtCoder and other CP sites. Progressive hint unlock, focus sessions, stats.",
+  "minimum_chrome_version": "114",
   "permissions": [
     "tabs",
     "storage",
     "declarativeNetRequest",
     "declarativeNetRequestWithHostAccess",
-    "alarms"
+    "alarms",
+    "notifications"
   ],
   "host_permissions": [
     "*://*/*"
@@ -36,7 +38,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["blocked.html", "blocked.js"],
+      "resources": ["blocked.html"],
       "matches": ["<all_urls>"]
     }
   ],
