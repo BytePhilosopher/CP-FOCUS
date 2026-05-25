@@ -91,18 +91,8 @@ ChatGPT · OpenAI Chat · Claude · Gemini · Copilot · Bing Chat · Perplexity
 
 ## Installation
 
-### From source (local testing)
-
-1. Clone or download this repository
-2. Open Chrome → `chrome://extensions/`
-3. Enable **Developer mode** (top-right toggle)
-4. Click **Load unpacked**
-5. Select the `codeforces-ai-blocker` folder
-6. The settings page opens automatically on first install
-
 ### From Chrome Web Store
-*(Coming soon)*
-
+`https://chromewebstore.google.com/detail/cf-focus-%E2%80%94-ai-blocker-for/obkgjknggnkpboahhaeieemknmpngmpl?utm_source=item-share-cb&pli=1`
 ---
 
 ## Usage
