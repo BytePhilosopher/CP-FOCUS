@@ -1,14 +1,16 @@
 # CF Focus — AI Blocker for Competitive Programming
 
-> Block AI tools automatically whenever you open a competitive programming platform. Earn hints by struggling first. Train harder, think deeper.
+> A Chrome extension that automatically blocks AI tools whenever you open a competitive programming platform. Earn hints by working through the problem first — train harder, think deeper.
+
+**[➜ Install from the Chrome Web Store](https://chromewebstore.google.com/detail/obkgjknggnkpboahhaeieemknmpngmpl)**
 
 ---
 
-## What it does
+## Overview
 
-CF Focus is a Chrome extension that **automatically blocks AI chatbots** (ChatGPT, Claude, Gemini, Copilot, …) the moment you open a competitive programming platform like Codeforces or LeetCode. Close the platform tab and AI sites become accessible again — no manual toggling.
+CF Focus **automatically blocks AI chatbots** (ChatGPT, Claude, Gemini, Copilot, and more) the moment you open a competitive programming platform such as Codeforces or LeetCode. Close the platform tab and AI sites become accessible again — no manual toggling required.
 
-It also gives you **Focus Sessions** (timed deep-work blocks, with an optional Hardcore mode that can't be paused), a **Progressive Hint Unlock** system that rewards real struggle, and tracks your **daily streak, focus minutes, blocks avoided, and problems solved**.
+It also provides **Focus Sessions** (timed deep-work blocks, with an optional Hardcore mode that cannot be paused), a **Progressive Hint Unlock** system that rewards genuine effort, and tracks your **daily streak, focus minutes, blocks avoided, and problems solved**.
 
 ---
 
@@ -91,17 +93,11 @@ ChatGPT · OpenAI Chat · Claude · Gemini · Copilot · Bing Chat · Perplexity
 
 ## Installation
 
-### From source (local testing)
+[**Install CF Focus from the Chrome Web Store →**](https://chromewebstore.google.com/detail/obkgjknggnkpboahhaeieemknmpngmpl)
 
-1. Clone or download this repository
-2. Open Chrome → `chrome://extensions/`
-3. Enable **Developer mode** (top-right toggle)
-4. Click **Load unpacked**
-5. Select the `codeforces-ai-blocker` folder
-6. The settings page opens automatically on first install
-
-### From Chrome Web Store
-*(Coming soon)*
+1. Open the listing on the Chrome Web Store.
+2. Click **Add to Chrome**, then confirm.
+3. The settings page opens automatically on first install.
 
 ---
 
@@ -124,22 +120,44 @@ ChatGPT · OpenAI Chat · Claude · Gemini · Copilot · Bing Chat · Perplexity
 
 ---
 
-## File Structure
+## Project Structure
 
 ```
 codeforces-ai-blocker/
-├── manifest.json      # Extension config (MV3)
-├── background.js      # Service worker: blocking, sessions, stats, hint tiers
-├── popup.html / .js   # Toolbar popup UI
-├── options.html / .js # Full settings page
-├── blocked.html / .js # Page shown when an AI site is blocked
-├── PRIVACY.md         # Privacy policy
-├── LICENSE            # MIT
-└── icons/
-    ├── icon16.png
-    ├── icon48.png
-    └── icon128.png
+├── manifest.json           # Extension manifest (Manifest V3)
+├── background.js           # Service worker — blocking, sessions, stats, hint tiers
+│
+├── popup.html              # Toolbar popup — markup
+├── popup.js                # Toolbar popup — logic
+├── options.html            # Settings page — markup
+├── options.js              # Settings page — logic
+├── blocked.html            # Block screen shown when an AI site is intercepted
+├── blocked.js              # Block screen — logic
+│
+├── icons/                  # Extension icons (16 / 48 / 128 px)
+│   ├── icon16.png
+│   ├── icon48.png
+│   └── icon128.png
+│
+├── store-assets/           # Chrome Web Store listing assets
+│   ├── LISTING.md
+│   ├── SCREENSHOTS.md
+│   ├── icon.svg
+│   ├── promo-marquee.html
+│   └── promo-small.html
+│
+├── DEPLOY.md               # Build & publishing guide
+├── PRIVACY.md              # Privacy policy
+├── README.md               # Project documentation
+└── LICENSE                 # MIT License
 ```
+
+| Area | Files | Responsibility |
+|------|-------|----------------|
+| Core | `manifest.json`, `background.js` | Extension configuration and the service worker that drives blocking, focus sessions, stats, and hint tiers |
+| UI | `popup.*`, `options.*`, `blocked.*` | Toolbar popup, full settings page, and the screen shown when an AI site is blocked |
+| Assets | `icons/`, `store-assets/` | Runtime icons and Chrome Web Store listing material |
+| Docs | `README.md`, `PRIVACY.md`, `DEPLOY.md`, `LICENSE` | Documentation, privacy policy, deployment notes, and license |
 
 ---
 
@@ -166,10 +184,19 @@ See [PRIVACY.md](PRIVACY.md) for the full policy.
 
 ## Contributing
 
-Pull requests welcome. To add a new platform or AI site, edit the `PLATFORMS` / `DEFAULT_BLOCKED` arrays in `background.js` and mirror the change in `options.js`.
+Contributions are welcome. To add a new platform or AI site, edit the `PLATFORMS` / `DEFAULT_BLOCKED` arrays in `background.js` and mirror the change in `options.js`. Please open an issue to discuss substantial changes before submitting a pull request.
+
+---
+
+## Author
+
+**Yostina Abera**
+📧 [aberayostina@gmail.com](mailto:aberayostina@gmail.com)
 
 ---
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+Released under the MIT License. See [LICENSE](LICENSE) for details.
+
+Copyright © 2026 Yostina Abera.
