@@ -12,24 +12,26 @@
 
     /* ── Dark theme (default) ───────────────────────────── */
     :root {
-      --bg:    #0b0b0d;
-      --s1:    #141418;
-      --s2:    #1c1c21;
-      --b1:    #26262c;
-      --b2:    #34343c;
-      --red:   #e0393c;
-      --red-d: rgba(224,57,60,0.12);
-      --red-m: rgba(224,57,60,0.32);
-      /* Text: high contrast throughout — no dim grays. */
+      --bg:    #0b0b0e;
+      --s1:    #141419;
+      --s2:    #1c1c23;
+      --b1:    #25252d;
+      --b2:    #34343e;
+      --red:   #e5383b;
+      --red-2: #ff5a3c;
+      --red-d: rgba(229,56,59,0.12);
+      --red-m: rgba(229,56,59,0.34);
+      --glow:  rgba(229,56,59,0.16);
       --text:  #ffffff;
       --text2: #d2d2da;
       --muted: #9a9aa6;
-      --dim:   rgba(255,255,255,0.08);
-      --track: #2a2a31;
+      --dim:   rgba(255,255,255,0.07);
+      --track: #26262e;
       --solid:    #ffffff;
-      --solid-h:  #e8e8e8;
+      --solid-h:  #ececec;
       --on-solid: #101014;
-      --sh4: rgba(0,0,0,0.5);
+      --ok:    #3ecf8e;
+      --sh:    0 10px 30px rgba(0,0,0,0.45);
       --mono:  'JetBrains Mono', ui-monospace, monospace;
       --sans:  'Inter', system-ui, sans-serif;
     }
@@ -40,107 +42,95 @@
     :root[data-theme="light"] {
       --bg:    #ffffff;
       --s1:    #f6f6f8;
-      --s2:    #ededf1;
-      --b1:    #e2e2e8;
-      --b2:    #cfcfd7;
+      --s2:    #ececf0;
+      --b1:    #e3e3e9;
+      --b2:    #cfcfd8;
       --red:   #c8191c;
+      --red-2: #e2401f;
       --red-d: rgba(200,25,28,0.08);
       --red-m: rgba(200,25,28,0.30);
+      --glow:  rgba(200,25,28,0.08);
       --text:  #0f0f12;
       --text2: #3c3c45;
       --muted: #63636f;
       --dim:   rgba(0,0,0,0.05);
-      --track: #e6e6ec;
+      --track: #e8e8ee;
       --solid:    #14141a;
       --solid-h:  #000000;
       --on-solid: #ffffff;
-      --sh4: rgba(0,0,0,0.14);
+      --ok:    #13955b;
+      --sh:    0 8px 24px rgba(0,0,0,0.10);
     }
 
     body {
-      width: 292px;
-      background: var(--bg);
+      width: 340px;
+      background:
+        radial-gradient(120% 60% at 50% -10%, var(--glow), transparent 60%),
+        var(--bg);
       color: var(--text);
       font-family: var(--sans);
       font-size: 12px;
       overflow: hidden;
+      -webkit-font-smoothing: antialiased;
     }
+    button { font-family: inherit; }
+    button:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
 
     /* ── Header ─────────────────────────────────────────── */
     .header {
-      height: 40px; padding: 0 12px;
-      display: flex; align-items: center; gap: 7px;
-      border-bottom: 1px solid var(--b1);
+      height: 48px; padding: 0 14px;
+      display: flex; align-items: center; gap: 8px;
     }
     .logo {
-      width: 22px; height: 22px; background: var(--red); border-radius: 6px;
+      width: 28px; height: 28px; border-radius: 8px;
+      background: linear-gradient(135deg, var(--red-2), var(--red) 55%, #8d1013);
+      box-shadow: 0 4px 14px var(--red-m);
       display: flex; align-items: center; justify-content: center;
-      font-family: var(--mono); font-weight: 800; font-size: 9px;
+      font-family: var(--mono); font-weight: 800; font-size: 10px;
       color: #fff; flex-shrink: 0; letter-spacing: -0.5px;
     }
-    .header-title {
-      flex: 1; font-size: 12.5px; font-weight: 700;
-      color: var(--text); letter-spacing: -0.3px;
+    .brand { flex: 1; min-width: 0; line-height: 1.15; }
+    .brand-title { font-size: 13.5px; font-weight: 800; letter-spacing: -0.3px; }
+    .brand-sub {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 10.5px; font-weight: 600; color: var(--muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .header-streak {
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+    .status-dot.on { background: var(--red); box-shadow: 0 0 0 3px var(--red-d); animation: pulse 2s ease-in-out infinite; }
+    .status-dot.snoozed { background: #e0a23a; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.45} }
+
+    .streak {
       display: flex; align-items: center; gap: 4px;
-      font-family: var(--mono); font-size: 10px; font-weight: 700;
-      color: var(--text2); padding: 2px 7px;
-      background: var(--dim); border-radius: 100px;
+      font-family: var(--mono); font-size: 11px; font-weight: 800;
+      color: var(--text); padding: 4px 9px 4px 7px;
+      background: var(--dim); border: 1px solid var(--b1); border-radius: 100px;
     }
-    .header-streak-num { color: var(--text); }
+    .streak svg { color: var(--muted); }
+    .streak.hot { background: var(--red-d); border-color: var(--red-m); }
+    .streak.hot svg { color: var(--red-2); }
     .icon-btn {
-      width: 24px; height: 24px; background: transparent;
-      border: 1px solid var(--b1); border-radius: 7px;
+      width: 28px; height: 28px; background: transparent;
+      border: 1px solid var(--b1); border-radius: 8px;
       color: var(--text2); cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0; transition: all 0.15s;
     }
     .icon-btn:hover { background: var(--s1); border-color: var(--b2); color: var(--text); }
 
-    /* ── Status bar ─────────────────────────────────────── */
-    .status-bar {
-      padding: 8px 12px;
-      display: flex; align-items: center; gap: 9px;
-      border-bottom: 1px solid var(--b1);
-    }
-    .status-dot {
-      width: 7px; height: 7px; border-radius: 50%;
-      flex-shrink: 0; transition: all 0.3s;
-    }
-    .status-dot.active  { background: var(--red); box-shadow: 0 0 8px var(--red-m); animation: pulse 2s ease-in-out infinite; }
-    .status-dot.session { background: var(--red); box-shadow: 0 0 8px var(--red-m); animation: pulse 2s ease-in-out infinite; }
-    .status-dot.snoozed { background: var(--muted); }
-    .status-dot.inactive{ background: var(--muted); }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-
-    .status-label {
-      flex: 1; min-width: 0;
-      font-size: 11.5px; font-weight: 600; color: var(--text);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .status-badge {
-      font-family: var(--mono); font-size: 8.5px; font-weight: 700;
-      letter-spacing: 0.6px; text-transform: uppercase;
-      padding: 2px 7px; border-radius: 100px; flex-shrink: 0;
-    }
-    .status-badge.active,
-    .status-badge.session { background: var(--red-d); color: var(--red); border: 1px solid var(--red-m); }
-    .status-badge.snoozed { background: var(--dim); color: var(--text2); border: 1px solid var(--b1); }
-    .status-badge.inactive{ background: var(--dim); color: var(--text2); border: 1px solid var(--b1); }
-
     /* ── Flame ring ─────────────────────────────────────────
        popup.js sets --heat (0 → 1) on .ring-wrap. Everything below scales off
        it, so the whole clock — arc, dial and numerals — burns hotter together
        instead of only the flame changing. */
-    .hero { padding: 12px 12px 8px; text-align: center; }
+    .hero { padding: 2px 14px 10px; text-align: center; }
     .ring-wrap {
       display: inline-block; position: relative; line-height: 0;
       --heat: 0;
     }
     /* Scorch bloom inside the dial */
     .ring-wrap::before {
-      content: ''; position: absolute; inset: 26px; border-radius: 50%;
+      content: ''; position: absolute; inset: 24px; border-radius: 50%;
       background: radial-gradient(circle,
         rgba(255,45,26, calc(var(--heat) * 0.26)) 0%,
         rgba(255,45,26, calc(var(--heat) * 0.10)) 45%,
@@ -175,7 +165,7 @@
       50%     { transform: scaleY(1.2) scaleX(0.9); opacity: 0.7;  }
     }
     @media (prefers-reduced-motion: reduce) {
-      #flameBody, #flameCore { animation: none; }
+      #flameBody, #flameCore, .status-dot.on { animation: none; }
     }
 
     .ring-center {
@@ -185,14 +175,14 @@
       line-height: 1; pointer-events: none;
     }
     .ring-eyebrow {
-      font-family: var(--mono); font-size: 8px; font-weight: 700;
+      font-family: var(--mono); font-size: 8.5px; font-weight: 700;
       letter-spacing: 1.4px; text-transform: uppercase;
       color: color-mix(in srgb, var(--muted), #ff5436 calc(var(--heat) * 55%));
       margin-bottom: 6px; position: relative; z-index: 1;
       transition: color 0.6s ease;
     }
     .ring-time {
-      font-family: var(--mono); font-size: 28px; font-weight: 800;
+      font-family: var(--mono); font-size: 27px; font-weight: 800;
       color: color-mix(in srgb, var(--text), #ff5436 calc(var(--heat) * 62%));
       letter-spacing: -1.4px;
       font-variant-numeric: tabular-nums;
@@ -201,99 +191,190 @@
       position: relative; z-index: 1;
     }
     .ring-sub {
-      font-family: var(--mono); font-size: 9px; font-weight: 600;
+      font-family: var(--mono); font-size: 9.5px; font-weight: 600;
       color: color-mix(in srgb, var(--text2), #ff5436 calc(var(--heat) * 50%));
       margin-top: 7px; position: relative; z-index: 1;
       transition: color 0.6s ease;
     }
 
     /* ── Today's stats ──────────────────────────────────── */
-    .today-stats {
-      display: grid; grid-template-columns: repeat(3, 1fr);
-      gap: 1px; background: var(--b1);
-      border-top: 1px solid var(--b1); border-bottom: 1px solid var(--b1);
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 0 14px; }
+    .stat {
+      background: var(--s1); border: 1px solid var(--b1); border-radius: 11px;
+      padding: 9px 6px 8px; text-align: center; position: relative;
     }
-    .today-stat { background: var(--bg); padding: 8px 6px; text-align: center; }
-    .today-stat-val {
-      font-family: var(--mono); font-size: 15px; font-weight: 800;
+    .stat-val {
+      font-family: var(--mono); font-size: 16px; font-weight: 800;
       color: var(--text); letter-spacing: -0.7px; line-height: 1;
+      font-variant-numeric: tabular-nums;
     }
-    .today-stat-val.red { color: var(--red); }
-    .today-stat-lbl {
-      font-size: 8px; color: var(--text2); margin-top: 3px;
-      font-family: var(--mono); letter-spacing: 0.4px; text-transform: uppercase;
+    .stat-val.red { color: var(--red); }
+    .stat-val.ok  { color: var(--ok); }
+    .stat-lbl {
+      font-size: 8.5px; color: var(--muted); margin-top: 5px; font-weight: 700;
+      font-family: var(--mono); letter-spacing: 0.6px; text-transform: uppercase;
     }
+    .stat-plus {
+      position: absolute; top: 5px; right: 5px;
+      width: 18px; height: 18px; border-radius: 6px;
+      border: 1px solid var(--b2); background: var(--bg); color: var(--text2);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .stat-plus:hover { border-color: var(--ok); color: var(--ok); }
+    .stat.bump .stat-val { animation: bump 0.45s cubic-bezier(0.34,1.6,0.64,1); }
+    @keyframes bump { 0%{transform:scale(1)} 40%{transform:scale(1.35)} 100%{transform:scale(1)} }
+
+    /* ── Week strip ─────────────────────────────────────── */
+    .week {
+      margin: 8px 14px 0; padding: 9px 12px 8px;
+      background: var(--s1); border: 1px solid var(--b1); border-radius: 11px;
+    }
+    .week-head {
+      display: flex; justify-content: space-between; align-items: baseline;
+      font-family: var(--mono); font-size: 8.5px; font-weight: 700;
+      letter-spacing: 0.8px; text-transform: uppercase; color: var(--muted);
+      margin-bottom: 7px;
+    }
+    .week-head b { color: var(--text); font-weight: 800; letter-spacing: 0; }
+    .week-bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; align-items: end; height: 34px; }
+    .week-bar {
+      height: 100%; display: flex; align-items: flex-end;
+      background: var(--dim); border-radius: 4px; overflow: hidden;
+    }
+    .week-bar i {
+      display: block; width: 100%; border-radius: 4px;
+      background: linear-gradient(to top, var(--red), var(--red-2));
+      transition: height 0.6s cubic-bezier(0.34,1.2,0.64,1);
+    }
+    .week-bar.goal i { box-shadow: 0 0 10px var(--red-m); }
+    .week-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 4px; }
+    .week-days span {
+      text-align: center; font-family: var(--mono); font-size: 8.5px; font-weight: 700; color: var(--muted);
+    }
+    .week-days span.today { color: var(--text); }
+
+    /* ── Focus session ──────────────────────────────────── */
+    .session {
+      margin: 8px 14px 0; padding: 10px 12px;
+      background: var(--s1); border: 1px solid var(--b1); border-radius: 11px;
+    }
+    .session-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .session-title { font-size: 11.5px; font-weight: 700; }
+    .hc-toggle {
+      display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;
+      font-size: 10px; font-weight: 700; color: var(--muted);
+    }
+    .hc-toggle input { display: none; }
+    .hc-switch {
+      width: 26px; height: 15px; border-radius: 10px; background: var(--b2);
+      position: relative; transition: background 0.2s;
+    }
+    .hc-switch::after {
+      content: ''; position: absolute; top: 2px; left: 2px; width: 11px; height: 11px;
+      border-radius: 50%; background: #fff; transition: transform 0.2s;
+    }
+    .hc-toggle input:checked + .hc-switch { background: var(--red); }
+    .hc-toggle input:checked + .hc-switch::after { transform: translateX(11px); }
+    .hc-toggle input:checked ~ span { color: var(--red); }
+    .durations { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+    .dur {
+      padding: 7px 0; border-radius: 8px; border: 1px solid var(--b1);
+      background: var(--bg); color: var(--text2); cursor: pointer;
+      font-family: var(--mono); font-size: 11px; font-weight: 700; transition: all 0.12s;
+    }
+    .dur:hover { border-color: var(--b2); color: var(--text); }
+    .dur.on { background: var(--solid); border-color: var(--solid); color: var(--on-solid); }
+    .hc-note { font-size: 10px; color: var(--muted); margin-top: 7px; line-height: 1.4; display: none; }
+    .hc-note.show { display: block; color: var(--red); }
+
+    .live { display: none; }
+    .live-row { display: flex; align-items: baseline; justify-content: space-between; }
+    .live-time {
+      font-family: var(--mono); font-size: 22px; font-weight: 800; letter-spacing: -1px;
+      font-variant-numeric: tabular-nums;
+    }
+    .live-tag {
+      font-family: var(--mono); font-size: 8.5px; font-weight: 800; letter-spacing: 0.8px;
+      text-transform: uppercase; padding: 3px 8px; border-radius: 100px;
+      background: var(--red-d); color: var(--red); border: 1px solid var(--red-m);
+    }
+    .live-bar { height: 5px; border-radius: 4px; background: var(--track); margin-top: 8px; overflow: hidden; }
+    .live-bar i {
+      display: block; height: 100%; width: 0;
+      background: linear-gradient(to right, var(--red), var(--red-2));
+      transition: width 1s linear;
+    }
+    .live-cap { font-size: 10px; color: var(--muted); margin-top: 6px; }
 
     /* ── Actions ────────────────────────────────────────── */
-    .actions { padding: 10px 12px 11px; display: flex; flex-direction: column; gap: 7px; }
-    .start-btn {
-      width: 100%; padding: 11px; background: var(--solid); border: none;
-      border-radius: 9px; color: var(--on-solid); font-family: var(--sans);
-      font-size: 12px; font-weight: 700; cursor: pointer;
+    .actions { padding: 10px 14px 14px; display: flex; flex-direction: column; gap: 7px; }
+    .row { display: flex; gap: 7px; }
+    .btn {
+      flex: 1; padding: 10px; border-radius: 10px; cursor: pointer;
+      font-size: 12px; font-weight: 700; letter-spacing: -0.1px;
       display: flex; align-items: center; justify-content: center; gap: 7px;
-      transition: background 0.15s, transform 0.1s; letter-spacing: -0.1px;
+      transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
     }
-    .start-btn:hover { background: var(--solid-h); }
-    .start-btn:active { transform: scale(0.98); }
-    .start-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--red-2), var(--red));
+      color: #fff; border: none; box-shadow: 0 6px 18px var(--red-m);
+    }
+    .btn-primary:hover { filter: brightness(1.08); }
+    .btn-solid { background: var(--solid); color: var(--on-solid); border: none; }
+    .btn-solid:hover { background: var(--solid-h); }
+    .btn-ghost {
+      background: transparent; border: 1px solid var(--b1); color: var(--text2);
+      font-size: 11px; font-weight: 600; padding: 8px;
+    }
+    .btn-ghost:hover { background: var(--s1); border-color: var(--b2); color: var(--text); }
+    .btn-ghost.warn { background: var(--red-d); border-color: var(--red-m); color: var(--red); }
 
-    .snooze-btn {
-      width: 100%; padding: 8px; background: transparent;
-      border: 1px solid var(--b1); border-radius: 9px;
-      color: var(--text2); cursor: pointer; font-family: var(--sans);
-      font-size: 11px; font-weight: 600; transition: all 0.15s;
-      display: flex; align-items: center; justify-content: center; gap: 6px;
+    .toast {
+      position: fixed; left: 50%; bottom: 12px; transform: translate(-50%, 12px);
+      background: var(--solid); color: var(--on-solid); border-radius: 100px;
+      padding: 7px 14px; font-size: 11px; font-weight: 700; box-shadow: var(--sh);
+      opacity: 0; pointer-events: none; transition: all 0.2s; white-space: nowrap;
+      display: flex; gap: 10px; align-items: center;
     }
-    .snooze-btn:hover { background: var(--s1); border-color: var(--red-m); color: var(--red); }
-    .snooze-btn:active { transform: scale(0.98); }
-    .snooze-btn.end-snooze { background: var(--red-d); border-color: var(--red-m); color: var(--red); }
-    #snoozeRow { display: none; }
-
-    /* Legacy focus session, if one is still running from a previous version. */
-    #sessionActive { display: none; }
-    .end-btn {
-      width: 100%; padding: 8px; background: transparent;
-      border: 1px solid var(--red-m); border-radius: 9px;
-      color: var(--red); font-family: var(--sans);
-      font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+    .toast.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+    .toast button {
+      background: none; border: none; color: inherit; opacity: 0.7; cursor: pointer;
+      font-size: 11px; font-weight: 800; text-decoration: underline;
     }
-    .end-btn:hover { background: var(--red-d); }
-    .end-btn.confirming { background: var(--red-d); box-shadow: 0 0 0 3px var(--red-d); }
-    .end-btn:active { transform: scale(0.98); }
   </style>
 </head>
 <body>
 
   <div class="header">
     <div class="logo">CF</div>
-    <span class="header-title">CF Focus</span>
-    <div class="header-streak" id="streakBadge" title="Current day streak">
-      <svg width="10" height="10" viewBox="0 0 16 16" fill="none">
-        <path d="M8 1C8 1 3 6 3 10a5 5 0 0 0 10 0C13 6 8 1 8 1Z" stroke="currentColor" stroke-width="1.4" fill="none"/>
+    <div class="brand">
+      <div class="brand-title">CF Focus</div>
+      <div class="brand-sub"><span class="status-dot" id="statusDot"></span><span id="statusLabel">Loading&hellip;</span></div>
+    </div>
+    <div class="streak" id="streakBadge" title="Day streak">
+      <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M8 .8s-4.8 4.4-4.8 9a4.8 4.8 0 0 0 9.6 0c0-1.9-.9-3.5-1.8-4.6-.2 1.4-1 2.3-1.8 2.3C9.4 5 8 .8 8 .8Z"/>
       </svg>
-      <span class="header-streak-num" id="streakNum">0</span>d
+      <span id="streakNum">0</span>
     </div>
     <button class="icon-btn" id="themeBtn" title="Theme">
-      <svg id="themeIcon" width="13" height="13" viewBox="0 0 20 20" fill="none"></svg>
+      <svg id="themeIcon" width="14" height="14" viewBox="0 0 20 20" fill="none"></svg>
     </button>
-    <button class="icon-btn" id="settingsBtn" title="Settings">
-      <svg width="13" height="13" viewBox="0 0 20 20" fill="none">
+    <button class="icon-btn" id="settingsBtn" title="Settings &amp; stats">
+      <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
         <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" stroke="currentColor" stroke-width="1.5"/>
         <path d="M17.3 8.3 16 7.6l.5-1.5-2.2-1.3-1 1.2-1.4-.4-.5-1.6H9l-.5 1.6-1.4.4-1-1.2L3.9 6.1l.5 1.5-1.3.7v2.4l1.3.7-.5 1.5L6 14.2l1-1.2 1.4.4.5 1.6h2.4l.5-1.6 1.4-.4 1 1.2 2.2-1.3-.5-1.5 1.3-.7V8.3Z" stroke="currentColor" stroke-width="1.3"/>
       </svg>
     </button>
   </div>
 
-  <div class="status-bar">
-    <div class="status-dot inactive" id="statusDot"></div>
-    <div class="status-label" id="statusLabel">No practice tab open</div>
-    <div class="status-badge inactive" id="statusBadge">Idle</div>
-  </div>
-
   <!-- Count-up focus clock with a flame that grows as the time adds up -->
   <div class="hero">
     <div class="ring-wrap">
-      <svg width="180" height="180" viewBox="0 0 200 200">
+      <svg width="164" height="164" viewBox="0 0 200 200">
         <defs>
           <linearGradient id="arcGrad" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%"   id="arcStop1" stop-color="#8f1114"/>
@@ -333,44 +414,82 @@
     </div>
   </div>
 
-  <div class="today-stats">
-    <div class="today-stat">
-      <div class="today-stat-val" id="todayTime">0m</div>
-      <div class="today-stat-lbl">Focused</div>
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-val" id="todayTime">0m</div>
+      <div class="stat-lbl">Today</div>
     </div>
-    <div class="today-stat">
-      <div class="today-stat-val red" id="todayBlocks">0</div>
-      <div class="today-stat-lbl">Resisted</div>
+    <div class="stat">
+      <div class="stat-val red" id="todayBlocks">0</div>
+      <div class="stat-lbl">Resisted</div>
     </div>
-    <div class="today-stat">
-      <div class="today-stat-val" id="todaySolved">0</div>
-      <div class="today-stat-lbl">Solved</div>
+    <div class="stat" id="solvedStat">
+      <button class="stat-plus" id="solvedBtn" title="I solved a problem (+1)">
+        <svg width="9" height="9" viewBox="0 0 12 12" fill="none"><path d="M6 1.5v9M1.5 6h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+      <div class="stat-val ok" id="todaySolved">0</div>
+      <div class="stat-lbl">Solved</div>
+    </div>
+  </div>
+
+  <div class="week">
+    <div class="week-head"><span>Last 7 days</span><span><b id="weekTotal">0m</b> focused</span></div>
+    <div class="week-bars" id="weekBars"></div>
+    <div class="week-days" id="weekDays"></div>
+  </div>
+
+  <!-- Focus session: pick a length, optionally lock it in hardcore -->
+  <div class="session" id="sessionCard">
+    <div id="sessionSetup">
+      <div class="session-head">
+        <span class="session-title">Focus session</span>
+        <label class="hc-toggle" title="No snooze, no unlock, can't be ended early">
+          <input type="checkbox" id="hardcoreCb">
+          <span class="hc-switch"></span>
+          <span>Hardcore</span>
+        </label>
+      </div>
+      <div class="durations" id="durations">
+        <button class="dur" data-min="25">25m</button>
+        <button class="dur" data-min="50">50m</button>
+        <button class="dur" data-min="90">90m</button>
+        <button class="dur" data-min="120">2h</button>
+      </div>
+      <div class="hc-note" id="hcNote">Hardcore can't be ended, snoozed or unlocked until the timer runs out.</div>
+    </div>
+    <div class="live" id="sessionLive">
+      <div class="live-row">
+        <span class="live-time" id="liveTime">00:00</span>
+        <span class="live-tag" id="liveTag">Session</span>
+      </div>
+      <div class="live-bar"><i id="liveBar"></i></div>
+      <div class="live-cap" id="liveCap">AI stays blocked until the session ends.</div>
     </div>
   </div>
 
   <div class="actions">
-    <button class="start-btn" id="startFocusBtn">
-      <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-        <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-      </svg>
-      <span id="startFocusLabel">Start Focus Tab</span>
+    <button class="btn btn-primary" id="primaryBtn">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5v11l9-5.5-9-5.5Z"/></svg>
+      <span id="primaryLabel">Start 50m session</span>
     </button>
-
-    <div id="sessionActive">
-      <button class="end-btn" id="endSessionBtn">End Session</button>
-    </div>
-
-    <div id="snoozeRow">
-      <button class="snooze-btn" id="snoozeBtn">
+    <div class="row">
+      <button class="btn btn-ghost" id="practiceBtn">
+        <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M6 3H3v10h10v-3M9 2h5v5M14 2 7 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span id="practiceLabel">Open practice</span>
+      </button>
+      <button class="btn btn-ghost" id="snoozeBtn">
         <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
           <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.4"/>
           <path d="M8 4.5V8l2.5 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
         </svg>
-        Snooze 15m
+        <span id="snoozeLabel">Snooze 15m</span>
       </button>
     </div>
   </div>
 
+  <div class="toast" id="toast"><span id="toastText"></span><button id="toastUndo">Undo</button></div>
+
+  <script src="common.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

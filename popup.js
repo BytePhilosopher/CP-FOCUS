@@ -1,37 +1,39 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const statusDot      = document.getElementById('statusDot');
-  const statusLabel    = document.getElementById('statusLabel');
-  const statusBadge    = document.getElementById('statusBadge');
-  const snoozeRow      = document.getElementById('snoozeRow');
-  const snoozeBtn      = document.getElementById('snoozeBtn');
-  const sessionActive  = document.getElementById('sessionActive');
-  const endSessionBtn  = document.getElementById('endSessionBtn');
-  const startFocusBtn  = document.getElementById('startFocusBtn');
-  const startFocusLabel = document.getElementById('startFocusLabel');
-  const streakNum      = document.getElementById('streakNum');
-  const todayTime      = document.getElementById('todayTime');
-  const todayBlocks    = document.getElementById('todayBlocks');
-  const todaySolved    = document.getElementById('todaySolved');
+  const $ = id => document.getElementById(id);
 
-  const ringProgress = document.getElementById('ringProgress');
-  const ringTime     = document.getElementById('ringTime');
-  const ringEyebrow  = document.getElementById('ringEyebrow');
-  const ringSub      = document.getElementById('ringSub');
-  const flame        = document.getElementById('flame');
-  const flameHalo    = document.getElementById('flameHalo');
-  const flameBody    = document.getElementById('flameBody').firstElementChild;
-  const flameCore    = document.getElementById('flameCore').firstElementChild;
-  const arcStop1     = document.getElementById('arcStop1');
-  const arcStop2     = document.getElementById('arcStop2');
+  const statusDot    = $('statusDot');
+  const statusLabel  = $('statusLabel');
+  const streakBadge  = $('streakBadge');
+  const streakNum    = $('streakNum');
+  const todayTime    = $('todayTime');
+  const todayBlocks  = $('todayBlocks');
+  const todaySolved  = $('todaySolved');
+  const primaryBtn   = $('primaryBtn');
+  const primaryLabel = $('primaryLabel');
+  const practiceLabel = $('practiceLabel');
+  const snoozeBtn    = $('snoozeBtn');
+  const snoozeLabel  = $('snoozeLabel');
+  const hardcoreCb   = $('hardcoreCb');
+  const durations    = $('durations');
+
+  const ringProgress = $('ringProgress');
+  const ringTime     = $('ringTime');
+  const ringEyebrow  = $('ringEyebrow');
+  const ringSub      = $('ringSub');
+  const flame        = $('flame');
+  const flameHalo    = $('flameHalo');
+  const flameBody    = $('flameBody').firstElementChild;
+  const flameCore    = $('flameCore').firstElementChild;
+  const arcStop1     = $('arcStop1');
+  const arcStop2     = $('arcStop2');
   const ringWrap     = document.querySelector('.ring-wrap');
 
   const RING_C = 452.39; // 2π × 72
   const RING_R = 72;
 
   let state = null;
-  let tickInterval = null;
-  let pollInterval = null;
-  let endCountdown = null;
+  let chosenMinutes = null;   // null until the user picks; falls back to the saved length
+  let endConfirm = null;      // timeout id while "tap again to end" is armed
 
   // ── Theme toggle ────────────────────────────────────────────────────────────
   const ICONS = {
@@ -43,8 +45,8 @@ document.addEventListener('DOMContentLoaded', () => {
     system:'<rect x="2" y="3.5" width="16" height="11" rx="2" stroke="currentColor" stroke-width="1.6"/>' +
            '<path d="M7 17.5h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
   };
-  const themeBtn  = document.getElementById('themeBtn');
-  const themeIcon = document.getElementById('themeIcon');
+  const themeBtn  = $('themeBtn');
+  const themeIcon = $('themeIcon');
 
   function paintThemeButton() {
     const pref = window.CFTheme.get();
@@ -64,14 +66,16 @@ document.addEventListener('DOMContentLoaded', () => {
     return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   }
 
-  function shortDuration(mins) {
-    if (mins >= 60) {
-      const h = Math.floor(mins / 60);
-      const m = mins % 60;
-      return m > 0 ? `${h}h${m}m` : `${h}h`;
-    }
-    return `${mins}m`;
+  function mmss(ms) {
+    const total = Math.max(0, Math.ceil(ms / 1000));
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    const tail = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    return h ? `${h}:${tail}` : tail;
   }
+
+  const shortDuration = mins => CF.fmtDuration(mins).replace(' ', '');
 
   // Amber → orange → deep red as the clock climbs.
   function mix(a, b, t) {
@@ -121,7 +125,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderClock() {
     if (!state) return;
     const { settings, local } = state;
-    const goalMs = Math.max(1, (settings.dailyGoal || 120) * 60000);
+    const goal = settings.dailyGoal || 120;
+    const goalMs = Math.max(1, goal * 60000);
 
     // The clock is tied to practice tabs being open: it starts when the first
     // one appears and resets when the last one closes.
@@ -134,10 +139,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!local.focusClockStart) {
       ringEyebrow.textContent = 'Focus Time';
-      ringSub.textContent = `Goal ${shortDuration(settings.dailyGoal || 120)}`;
+      ringSub.textContent = `Goal ${shortDuration(goal)}`;
     } else if (progress >= 1) {
       ringEyebrow.textContent = 'Goal Smashed';
-      ringSub.textContent = `Goal ${shortDuration(settings.dailyGoal || 120)} · done`;
+      ringSub.textContent = `Goal ${shortDuration(goal)} · done`;
     } else {
       ringEyebrow.textContent = 'Focus Time';
       const leftMins = Math.ceil((goalMs - elapsed) / 60000);
@@ -145,151 +150,251 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // ── Session countdown ───────────────────────────────────────────────────────
+  function renderSession() {
+    if (!state) return;
+    const s = state.session;
+    $('sessionSetup').style.display = s ? 'none' : '';
+    $('sessionLive').style.display  = s ? 'block' : 'none';
+    if (!s) return;
+
+    const total = Math.max(1, (s.duration || 50) * 60000);
+    const remaining = s.pausedRemainingMs > 0 ? s.pausedRemainingMs : Math.max(0, s.endTime - Date.now());
+    $('liveTime').textContent = mmss(remaining);
+    $('liveBar').style.width = `${(100 * (1 - remaining / total)).toFixed(1)}%`;
+    $('liveTag').textContent = s.hardcore ? 'Hardcore' : (s.pausedRemainingMs ? 'Paused' : 'Session');
+    $('liveCap').textContent = s.pausedRemainingMs
+      ? 'Paused while snoozed — resumes when the snooze ends.'
+      : s.hardcore
+        ? 'Locked in. No snooze and no unlock until this hits zero.'
+        : `Ends at ${new Date(s.endTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}. AI stays blocked until then.`;
+
+    // The session may have run out between polls.
+    if (remaining <= 0) setTimeout(loadState, 800);
+  }
+
+  // ── Week strip ──────────────────────────────────────────────────────────────
+  function renderWeek() {
+    const { settings, local, liveTodayMinutes } = state;
+    const goal = settings.dailyGoal || 120;
+    const log = local.dayLog || {};
+    const today = new Date();
+    const bars = $('weekBars'), days = $('weekDays');
+    bars.textContent = ''; days.textContent = '';
+    let total = 0;
+    const vals = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = CF.addDays(today, -i);
+      const key = CF.dayKey(d);
+      const m = i === 0 ? (liveTodayMinutes || 0) : ((log[key] && log[key].m) || 0);
+      vals.push({ d, m, today: i === 0 });
+      total += m;
+    }
+    const max = Math.max(goal, ...vals.map(v => v.m));
+    for (const v of vals) {
+      const bar = document.createElement('div');
+      bar.className = 'week-bar' + (v.m >= goal ? ' goal' : '');
+      bar.title = `${v.d.toLocaleDateString([], { weekday: 'long' })}: ${CF.fmtDuration(v.m)}`;
+      const fill = document.createElement('i');
+      fill.style.height = v.m ? `${Math.max(8, (v.m / max) * 100)}%` : '0%';
+      bar.appendChild(fill);
+      bars.appendChild(bar);
+      const lbl = document.createElement('span');
+      lbl.textContent = v.d.toLocaleDateString([], { weekday: 'narrow' });
+      if (v.today) lbl.className = 'today';
+      days.appendChild(lbl);
+    }
+    $('weekTotal').textContent = CF.fmtDuration(total);
+  }
+
   // ── Main render ─────────────────────────────────────────────────────────────
   function render() {
     if (!state) return;
-    const { settings, local, focusTabCount, liveTodayMinutes } = state;
+    const { settings, local, focusTabCount, liveTodayMinutes, session } = state;
     const now = Date.now();
-    const isSnoozed   = settings.snoozeUntil && now < settings.snoozeUntil;
-    const isBlocking  = local.blocking;
-    const fs          = local.focusSession;
-    const inSession   = fs && (fs.pausedRemainingMs > 0 || now < fs.endTime);
-    const isHardcore  = inSession && fs.hardcore;
-    const hasTabs     = (focusTabCount || 0) > 0;
+    const isSnoozed  = settings.snoozeUntil && now < settings.snoozeUntil;
+    const isBlocking = local.blocking;
+    const isHardcore = !!(session && session.hardcore);
+    const hasTabs    = (focusTabCount || 0) > 0;
 
-    streakNum.textContent = local.currentStreak || 0;
+    streakNum.textContent = state.streak || 0;
+    streakBadge.classList.toggle('hot', (state.streak || 0) > 0);
+    streakBadge.title = `${state.streak || 0}-day streak · best ${local.longestStreak || 0}`;
 
-    const todayMins = liveTodayMinutes || 0;
-    todayTime.textContent   = shortDuration(todayMins);
+    todayTime.textContent   = shortDuration(liveTodayMinutes || 0);
     todayBlocks.textContent = local.todayBlocks || 0;
     todaySolved.textContent = local.todaySolved || 0;
 
-    // ── Status: one short line, no sub-caption ───────────────────────────────
+    // ── Status line ──────────────────────────────────────────────────────────
     if (isSnoozed) {
       const mins = Math.ceil((settings.snoozeUntil - now) / 60000);
-      statusDot.className     = 'status-dot snoozed';
-      statusLabel.textContent = `Snoozed · ${mins}m left`;
-      statusBadge.className   = 'status-badge snoozed';
-      statusBadge.textContent = 'Paused';
+      statusDot.className = 'status-dot snoozed';
+      statusLabel.textContent = `AI unlocked · ${mins}m left`;
     } else if (isBlocking) {
-      statusDot.className     = 'status-dot active';
-      statusLabel.textContent = hasTabs
-        ? `Blocking · ${focusTabCount} tab${focusTabCount !== 1 ? 's' : ''}`
-        : 'Blocking';
-      statusBadge.className   = 'status-badge active';
-      statusBadge.textContent = 'On';
+      statusDot.className = 'status-dot on';
+      statusLabel.textContent = session
+        ? (isHardcore ? 'Hardcore session · AI blocked' : 'Focus session · AI blocked')
+        : hasTabs
+          ? `AI blocked · ${focusTabCount} practice tab${focusTabCount !== 1 ? 's' : ''}`
+          : 'AI blocked · scheduled';
     } else {
-      statusDot.className     = 'status-dot inactive';
-      statusLabel.textContent = 'No practice tab open';
-      statusBadge.className   = 'status-badge inactive';
-      statusBadge.textContent = 'Idle';
+      statusDot.className = 'status-dot';
+      statusLabel.textContent = 'Idle · open a practice tab to start';
     }
 
-    // ── Controls ─────────────────────────────────────────────────────────────
-    startFocusLabel.textContent = hasTabs ? 'Go to practice tab' : 'Start Focus Tab';
+    // ── Session controls ─────────────────────────────────────────────────────
+    const mins = chosenMinutes || settings.sessionLength || 50;
+    durations.querySelectorAll('.dur').forEach(b =>
+      b.classList.toggle('on', Number(b.dataset.min) === mins));
+    $('hcNote').classList.toggle('show', hardcoreCb.checked);
+
+    if (!session) {
+      primaryBtn.className = 'btn btn-primary';
+      primaryBtn.disabled = false;
+      primaryLabel.textContent = `Start ${shortDuration(mins)}${hardcoreCb.checked ? ' hardcore' : ''} session`;
+      primaryBtn.dataset.action = 'start';
+    } else if (isHardcore) {
+      primaryBtn.className = 'btn btn-ghost';
+      primaryBtn.disabled = true;
+      primaryLabel.textContent = 'Hardcore — locked until the end';
+      primaryBtn.dataset.action = '';
+    } else if (endConfirm) {
+      primaryBtn.className = 'btn btn-ghost warn';
+      primaryBtn.disabled = false;
+      primaryLabel.textContent = 'Tap again to end the session';
+      primaryBtn.dataset.action = 'end';
+    } else {
+      primaryBtn.className = 'btn btn-ghost';
+      primaryBtn.disabled = false;
+      primaryLabel.textContent = 'End session early';
+      primaryBtn.dataset.action = 'end';
+    }
+
+    practiceLabel.textContent = hasTabs ? 'Go to practice' : 'Open practice';
 
     // Snooze is offered whenever blocking is in effect (never during hardcore).
-    snoozeRow.style.display = (!isHardcore && (isBlocking || isSnoozed)) ? 'block' : 'none';
+    snoozeBtn.disabled = isHardcore || (!isBlocking && !isSnoozed);
     if (isSnoozed) {
-      snoozeBtn.className = 'snooze-btn end-snooze';
-      setSnoozeBtn('End Snooze');
+      snoozeBtn.classList.add('warn');
+      snoozeLabel.textContent = 'Re-block now';
       snoozeBtn.dataset.action = 'unsnooze';
     } else {
-      snoozeBtn.className = 'snooze-btn';
-      setSnoozeBtn(`Snooze ${settings.snoozeDuration || 15}m`);
+      snoozeBtn.classList.remove('warn');
+      snoozeLabel.textContent = `Snooze ${shortDuration(settings.snoozeDuration || 15)}`;
       snoozeBtn.dataset.action = 'snooze';
     }
+    snoozeBtn.title = isHardcore ? 'Snooze is disabled during a hardcore session'
+      : snoozeBtn.disabled ? 'Nothing is blocked right now' : '';
 
-    // Only surfaced for a session left over from an older version — sessions
-    // can no longer be started from this popup.
-    sessionActive.style.display = (inSession && !isHardcore) ? 'block' : 'none';
-    if (!inSession && endCountdown !== null) {
-      clearInterval(endCountdown);
-      endCountdown = null;
-      endSessionBtn.textContent = 'End Session';
-      endSessionBtn.classList.remove('confirming');
-    }
-
+    renderWeek();
+    renderSession();
     renderClock();
   }
 
-  function setSnoozeBtn(text) {
-    if (!snoozeBtn) return;
-    const svg = snoozeBtn.querySelector('svg');
-    const clone = svg ? svg.cloneNode(true) : null;
-    snoozeBtn.innerHTML = '';
-    if (clone) snoozeBtn.appendChild(clone);
-    snoozeBtn.appendChild(document.createTextNode(' ' + text));
+  function send(msg) {
+    return new Promise(resolve => chrome.runtime.sendMessage(msg, resp => {
+      void chrome.runtime.lastError;
+      resolve(resp);
+    }));
   }
 
-  function loadState() {
-    chrome.runtime.sendMessage({ type: 'GET_STATE' }, response => {
-      void chrome.runtime.lastError;
-      if (response) { state = response; render(); }
-    });
+  async function loadState() {
+    const response = await send({ type: 'GET_STATE' });
+    if (response && response.settings) { state = response; render(); }
   }
 
   loadState();
-  pollInterval = setInterval(loadState, 5000);
-  // The clock ticks locally between polls so the seconds never stutter.
-  tickInterval = setInterval(renderClock, 1000);
+  // Re-render as soon as anything changes instead of waiting for a poll.
+  let reloadTimer = null;
+  chrome.storage.onChanged.addListener(() => {
+    clearTimeout(reloadTimer);
+    reloadTimer = setTimeout(loadState, 80);
+  });
+  const pollInterval = setInterval(loadState, 15000);
+  // The clocks tick locally between loads so the seconds never stutter.
+  const tickInterval = setInterval(() => { renderClock(); renderSession(); }, 1000);
 
-  // ── Start / go to a practice tab ────────────────────────────────────────────
-  startFocusBtn.addEventListener('click', () => {
-    startFocusBtn.disabled = true;
-    chrome.runtime.sendMessage({ type: 'OPEN_FOCUS_TAB' }, () => {
-      void chrome.runtime.lastError;
-      startFocusBtn.disabled = false;
-      window.close();
-    });
+  // ── Toast with undo ─────────────────────────────────────────────────────────
+  let toastTimer = null, toastUndo = null;
+  function toast(text, undo) {
+    $('toastText').textContent = text;
+    $('toastUndo').style.display = undo ? '' : 'none';
+    toastUndo = undo || null;
+    $('toast').classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => $('toast').classList.remove('show'), 3500);
+  }
+  $('toastUndo').addEventListener('click', () => {
+    if (toastUndo) toastUndo();
+    toastUndo = null;
+    $('toast').classList.remove('show');
+  });
+
+  // ── Session ─────────────────────────────────────────────────────────────────
+  durations.addEventListener('click', e => {
+    const b = e.target.closest('[data-min]');
+    if (!b) return;
+    chosenMinutes = Number(b.dataset.min);
+    render();
+  });
+  hardcoreCb.addEventListener('change', render);
+
+  primaryBtn.addEventListener('click', async () => {
+    if (!state) return;
+    const action = primaryBtn.dataset.action;
+    if (action === 'start') {
+      const duration = chosenMinutes || state.settings.sessionLength || 50;
+      const hardcore = hardcoreCb.checked;
+      primaryBtn.disabled = true;
+      const resp = await send({ type: 'START_SESSION', duration, hardcore });
+      if (resp && resp.ok) toast(`${shortDuration(duration)} ${hardcore ? 'hardcore ' : ''}session started`);
+      else toast('Could not start the session');
+      hardcoreCb.checked = false;
+      loadState();
+    } else if (action === 'end') {
+      if (!endConfirm) {
+        endConfirm = setTimeout(() => { endConfirm = null; render(); }, 4000);
+        render();
+        return;
+      }
+      clearTimeout(endConfirm);
+      endConfirm = null;
+      await send({ type: 'END_SESSION' });
+      toast('Session ended');
+      loadState();
+    }
+  });
+
+  // ── Solved +1 ───────────────────────────────────────────────────────────────
+  $('solvedBtn').addEventListener('click', async () => {
+    const resp = await send({ type: 'RECORD_SOLVED' });
+    if (!resp || !resp.ok) return;
+    const stat = $('solvedStat');
+    stat.classList.remove('bump'); void stat.offsetWidth; stat.classList.add('bump');
+    toast(`Nice! ${resp.todaySolved} solved today`, () => send({ type: 'UNDO_SOLVED' }));
+  });
+
+  // ── Practice tab ────────────────────────────────────────────────────────────
+  $('practiceBtn').addEventListener('click', async () => {
+    await send({ type: 'OPEN_FOCUS_TAB' });
+    window.close();
   });
 
   // ── Snooze ──────────────────────────────────────────────────────────────────
-  snoozeBtn.addEventListener('click', () => {
-    const type = snoozeBtn.dataset.action === 'unsnooze' ? 'UNSNOOZE' : 'SNOOZE';
-    const payload = type === 'SNOOZE'
-      ? { type, minutes: (state && state.settings.snoozeDuration) || 15 }
-      : { type };
-    chrome.runtime.sendMessage(payload, () => { void chrome.runtime.lastError; loadState(); });
+  snoozeBtn.addEventListener('click', async () => {
+    const unsnooze = snoozeBtn.dataset.action === 'unsnooze';
+    const resp = await send(unsnooze
+      ? { type: 'UNSNOOZE' }
+      : { type: 'SNOOZE', minutes: (state && state.settings.snoozeDuration) || 15 });
+    if (resp && resp.ok === false && resp.reason === 'hardcore') toast('Not during a hardcore session');
+    loadState();
   });
 
-  // ── End a leftover session — 8s countdown ───────────────────────────────────
-  endSessionBtn.addEventListener('click', () => {
-    if (endCountdown !== null) {
-      clearInterval(endCountdown);
-      endCountdown = null;
-      endSessionBtn.textContent = 'End Session';
-      endSessionBtn.classList.remove('confirming');
-      return;
-    }
-    let count = 8;
-    endSessionBtn.classList.add('confirming');
-    endSessionBtn.textContent = `Sure? Cancel in ${count}s`;
-    endCountdown = setInterval(() => {
-      count--;
-      if (count <= 0) {
-        clearInterval(endCountdown);
-        endCountdown = null;
-        endSessionBtn.disabled = true;
-        chrome.runtime.sendMessage({ type: 'END_SESSION' }, () => {
-          void chrome.runtime.lastError;
-          endSessionBtn.disabled = false;
-          endSessionBtn.classList.remove('confirming');
-          endSessionBtn.textContent = 'End Session';
-          loadState();
-        });
-      } else {
-        endSessionBtn.textContent = `Sure? Cancel in ${count}s`;
-      }
-    }, 1000);
-  });
+  $('settingsBtn').addEventListener('click', () => chrome.runtime.openOptionsPage());
 
-  document.getElementById('settingsBtn')
-    .addEventListener('click', () => chrome.runtime.openOptionsPage());
-
-  window.addEventListener('unload', () => {
-    if (tickInterval) clearInterval(tickInterval);
-    if (pollInterval) clearInterval(pollInterval);
-    if (endCountdown !== null) clearInterval(endCountdown);
+  window.addEventListener('pagehide', () => {
+    clearInterval(tickInterval);
+    clearInterval(pollInterval);
+    clearTimeout(endConfirm);
   });
 });

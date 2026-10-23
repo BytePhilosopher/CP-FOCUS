@@ -1,69 +1,14 @@
-// CF Focus v2.1 — background.js
+// CF Focus — background.js
 // Stateless design: queries all tabs on every event (reliable across SW restarts)
 
-const PLATFORMS = {
-  codeforces: { name: 'Codeforces',  domains: ['codeforces.com'] },
-  leetcode:   { name: 'LeetCode',    domains: ['leetcode.com'] },
-  atcoder:    { name: 'AtCoder',     domains: ['atcoder.jp'] },
-  hackerrank: { name: 'HackerRank',  domains: ['hackerrank.com'] },
-  codechef:   { name: 'CodeChef',    domains: ['codechef.com'] },
-  cses:       { name: 'CSES',        domains: ['cses.fi'] },
-};
+importScripts('common.js');
 
-const PLATFORM_URLS = {
-  codeforces: 'https://codeforces.com',
-  leetcode:   'https://leetcode.com',
-  atcoder:    'https://atcoder.jp',
-  hackerrank: 'https://hackerrank.com',
-  codechef:   'https://codechef.com',
-  cses:       'https://cses.fi',
-};
-
-const DEFAULT_BLOCKED = [
-  { id: 'chatgpt',    domain: 'chatgpt.com',            name: 'ChatGPT' },
-  { id: 'openai',     domain: 'chat.openai.com',        name: 'OpenAI Chat' },
-  { id: 'claude',     domain: 'claude.ai',              name: 'Claude' },
-  { id: 'gemini',     domain: 'gemini.google.com',      name: 'Gemini' },
-  { id: 'copilot',    domain: 'copilot.microsoft.com',  name: 'Copilot' },
-  { id: 'bingchat',   domain: 'bing.com',     path: '/chat', name: 'Bing Chat' },
-  { id: 'perplexity', domain: 'perplexity.ai',          name: 'Perplexity' },
-  { id: 'phind',      domain: 'phind.com',              name: 'Phind' },
-  { id: 'poe',        domain: 'poe.com',                name: 'Poe' },
-  { id: 'deepseek',   domain: 'deepseek.com',           name: 'DeepSeek' },
-  { id: 'grok',       domain: 'grok.com',               name: 'Grok' },
-  { id: 'mistral',    domain: 'mistral.ai',             name: 'Mistral' },
-  { id: 'you',        domain: 'you.com',                name: 'You.com' },
-  { id: 'cohere',     domain: 'cohere.com',             name: 'Cohere' },
-  { id: 'hfchat',     domain: 'huggingface.co', path: '/chat', name: 'HF Chat' },
-  { id: 'aistudio',   domain: 'aistudio.google.com',    name: 'AI Studio' },
-  { id: 'writesonic', domain: 'writesonic.com',         name: 'Writesonic' },
-  { id: 'xai',        domain: 'x.ai',                   name: 'xAI' },
-  { id: 'character',  domain: 'character.ai',           name: 'Character.AI' },
-];
+const { DEFAULT_BLOCKED, DEFAULT_SETTINGS } = self.CF;
 
 // ─── Storage helpers ──────────────────────────────────────────────────────────
 
 function getSettings() {
-  return new Promise(resolve => chrome.storage.sync.get({
-    enabledPlatforms: ['codeforces', 'leetcode', 'atcoder', 'hackerrank', 'codechef', 'cses'],
-    disabledDefaults: [],
-    customBlocklist: [],
-    customPlatforms: [],
-    snoozeUntil: 0,
-    snoozeDuration: 15,
-    schedule: { enabled: false, days: [1, 2, 3, 4, 5], startHour: 9, endHour: 21 },
-    pin: null,
-    theme: 'system',       // 'light' | 'dark' | 'system'
-    dailyGoal: 120,        // minutes
-    breakReminder: 50,     // minutes, 0 = disabled
-    // Earned AI unlock (minutes of work before AI can be unlocked).
-    // Key name kept as `hintTiers` only because it is already persisted in
-    // users' synced settings — renaming it would silently reset their config.
-    hintTiers: {
-      unlockAt: 35,      // AI unlock button becomes available after this long
-      unlockMinutes: 10, // how long the AI unlock lasts
-    },
-  }, resolve));
+  return new Promise(resolve => chrome.storage.sync.get(DEFAULT_SETTINGS, resolve));
 }
 
 function getLocalState() {
@@ -77,6 +22,7 @@ function getLocalState() {
     longestStreak: 0,
     lastSessionDate: null,
     focusSession: null,
+    focusSessionsCompleted: 0,
     aiBlocksAvoided: 0,
     problemsSolved: 0,
     // Unlock timer — paused when snoozed/scheduled-off, reset when focus tabs close.
@@ -86,6 +32,7 @@ function getLocalState() {
     // it keeps running through a snooze and resets only when the last
     // competitive-programming tab is closed.
     focusClockStart: null,
+    lastBreakAt: null,        // last break-reminder notification, within this clock run
     // Daily tracking
     todayDate: null,
     todayMinutes: 0,
@@ -97,14 +44,25 @@ function getLocalState() {
   }, resolve));
 }
 
+// ─── Serialized work queue ────────────────────────────────────────────────────
+// Every read-modify-write of local state and every DNR update goes through
+// this chain. Without it, two syncs racing (e.g. a tab event and an alarm)
+// would both remove-then-add the same rule IDs and one would throw, and two
+// counter bumps could read the same old value and lose an increment.
+let queue = Promise.resolve();
+function enqueue(fn) {
+  const run = queue.then(fn);
+  queue = run.catch(err => console.error('CF Focus:', err));
+  return run;
+}
+
 // ─── Lock-in calendar ─────────────────────────────────────────────────────────
 // One compact entry per day: m=minutes, b=AI blocks resisted, s=problems solved,
 // n=stat sessions. Kept for ~400 days so the year grid always has a full window.
 const DAY_LOG_KEEP_DAYS = 400;
 
 function pruneDayLog(dayLog) {
-  const cutoff = new Date(Date.now() - DAY_LOG_KEEP_DAYS * 86400000)
-    .toISOString().slice(0, 10);
+  const cutoff = CF.dayKey(CF.addDays(new Date(), -DAY_LOG_KEEP_DAYS));
   const out = {};
   for (const [date, entry] of Object.entries(dayLog || {})) {
     if (date >= cutoff) out[date] = entry;
@@ -137,36 +95,23 @@ function effectiveElapsedMs(local) {
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 
-function todayStr() {
-  return new Date().toISOString().slice(0, 10);
+// A focus session counts as live while it's running or frozen by a snooze.
+function activeSession(local, now = Date.now()) {
+  const fs = local.focusSession;
+  return fs && (fs.pausedRemainingMs > 0 || now < fs.endTime) ? fs : null;
 }
 
-function getActivePlatform(url) {
-  if (!url) return null;
-  try {
-    const hostname = new URL(url).hostname.replace(/^www\./, '');
-    for (const [key, p] of Object.entries(PLATFORMS)) {
-      if (p.domains.some(d => hostname === d || hostname.endsWith('.' + d))) return key;
-    }
-  } catch (_) {}
-  return null;
+function sessionRemainingMs(fs, now = Date.now()) {
+  return fs.pausedRemainingMs > 0 ? fs.pausedRemainingMs : Math.max(0, fs.endTime - now);
 }
 
-function isCustomPlatform(url, customPlatforms) {
-  if (!url || !customPlatforms || !customPlatforms.length) return false;
-  try {
-    const hostname = new URL(url).hostname.replace(/^www\./, '');
-    return customPlatforms.some(cp =>
-      hostname === cp.domain || hostname.endsWith('.' + cp.domain)
-    );
-  } catch (_) {}
-  return false;
-}
-
-function isFocusTab(tab, settings) {
-  const p = getActivePlatform(tab.url);
-  if (p && settings.enabledPlatforms.includes(p)) return true;
-  return isCustomPlatform(tab.url, settings.customPlatforms);
+// The stored streak only changes when a session ends, so it goes stale the
+// day after you stop. Report it as broken once a whole day has been missed.
+function liveStreak(local) {
+  const today = CF.dayKey();
+  const yesterday = CF.dayKey(CF.addDays(new Date(), -1));
+  return (local.lastSessionDate === today || local.lastSessionDate === yesterday)
+    ? (local.currentStreak || 0) : 0;
 }
 
 function checkSchedule(schedule) {
@@ -220,7 +165,7 @@ function makeDNRRule(id, domain, name, path) {
 
 // Reset daily counters if date has changed
 async function ensureToday(local) {
-  const today = todayStr();
+  const today = CF.dayKey();
   if (local.todayDate !== today) {
     // Roll the outgoing day into the lock-in calendar before clearing counters.
     const dayLog = archiveDay(local.dayLog, local.todayDate, {
@@ -240,55 +185,49 @@ async function ensureToday(local) {
 // ─── Debounced sync ───────────────────────────────────────────────────────────
 
 let syncTimer = null;
-let syncRunning = false;
 
 function debouncedSync() {
   if (syncTimer) clearTimeout(syncTimer);
-  syncTimer = setTimeout(async () => {
-    if (syncRunning) return;
-    syncRunning = true;
-    try {
-      await syncBlockingState();
-    } finally {
-      syncRunning = false;
-    }
-  }, 150);
+  syncTimer = setTimeout(() => { syncTimer = null; syncBlockingState(); }, 150);
+}
+
+function syncBlockingState() {
+  return enqueue(doSyncBlockingState);
 }
 
 // ─── Core: sync blocking state ────────────────────────────────────────────────
 
-async function syncBlockingState() {
+async function doSyncBlockingState() {
   const [settings, rawLocal] = await Promise.all([getSettings(), getLocalState()]);
   const local = await ensureToday(rawLocal);
 
   const tabs = await chrome.tabs.query({});
-  const focusTabs = tabs.filter(t => isFocusTab(t, settings));
+  const focusTabs = tabs.filter(t => CF.isFocusUrl(t.url, settings));
   const hasFocusTabs = focusTabs.length > 0;
 
   const now = Date.now();
-  const isSnoozed = settings.snoozeUntil && now < settings.snoozeUntil;
+  const isSnoozed = !!(settings.snoozeUntil && now < settings.snoozeUntil);
   const isScheduleActive = checkSchedule(settings.schedule);
   // A paused session is still "active" (frozen) — it should keep blocking from re-engaging
   // when the user closes focus tabs during a snooze.
-  const isFocusSession = local.focusSession &&
-    (local.focusSession.pausedRemainingMs > 0 || now < local.focusSession.endTime);
-  const isHardcoreSession = isFocusSession && local.focusSession.hardcore;
-  const block = !isSnoozed && (hasFocusTabs || isScheduleActive || isFocusSession);
+  const session = activeSession(local, now);
+  const isHardcoreSession = !!(session && session.hardcore);
+  const block = !isSnoozed && (hasFocusTabs || isScheduleActive || !!session);
 
-  // \u2500\u2500\u2500 Unlock-timer state machine \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  // ─── Unlock-timer state machine ───────────────────────────────────────────
   // Run when the user has focus tabs open AND blocking is currently in effect
   // AND we aren't in a hardcore session (which disables the unlock).
   const shouldRunUnlockTimer = hasFocusTabs && block && !isHardcoreSession;
   const timerPatch = {};
   if (!hasFocusTabs) {
-    // No focus tab \u2014 reset the cycle entirely.
+    // No focus tab — reset the cycle entirely.
     if (local.problemStartTime !== null || local.problemPausedAt !== null) {
       timerPatch.problemStartTime = null;
       timerPatch.problemPausedAt  = null;
     }
   } else if (shouldRunUnlockTimer) {
     if (local.problemPausedAt) {
-      // Resume \u2014 shift start forward by the paused duration.
+      // Resume — shift start forward by the paused duration.
       timerPatch.problemStartTime = local.problemStartTime + (now - local.problemPausedAt);
       timerPatch.problemPausedAt  = null;
     } else if (!local.problemStartTime) {
@@ -296,39 +235,38 @@ async function syncBlockingState() {
       timerPatch.problemStartTime = now;
       timerPatch.problemPausedAt  = null;
     }
-  } else if (hasFocusTabs && !shouldRunUnlockTimer) {
+  } else if (local.problemStartTime && !local.problemPausedAt) {
     // Pause (snoozed, scheduled off, or hardcore on).
-    if (local.problemStartTime && !local.problemPausedAt) {
-      timerPatch.problemPausedAt = now;
-    }
+    timerPatch.problemPausedAt = now;
   }
 
-  // \u2500\u2500\u2500 Count-up focus clock \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  // ─── Count-up focus clock ─────────────────────────────────────────────────
   // Starts the moment a practice tab appears and resets the moment the last one
   // closes. Deliberately independent of `block` so snoozing doesn't wipe it.
   const clockPatch = {};
   if (hasFocusTabs && !local.focusClockStart) {
     clockPatch.focusClockStart = now;
+    clockPatch.lastBreakAt = null;
   } else if (!hasFocusTabs && local.focusClockStart) {
     clockPatch.focusClockStart = null;
+    clockPatch.lastBreakAt = null;
   }
 
-  // \u2500\u2500\u2500 Focus session pause-during-snooze \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  // ─── Focus session pause-during-snooze ────────────────────────────────────
   // If the user is in a non-hardcore focus session and snooze starts, pause it.
   // When snooze ends we resume by re-extending endTime.
   const sessionPatch = {};
-  if (local.focusSession) {
-    const fs = local.focusSession;
-    if (!fs.hardcore && isSnoozed && !fs.pausedRemainingMs) {
+  if (session) {
+    if (!session.hardcore && isSnoozed && !session.pausedRemainingMs) {
       // Pause: store remaining ms and clear the alarm
-      const remaining = Math.max(0, fs.endTime - now);
-      sessionPatch.focusSession = { ...fs, pausedRemainingMs: remaining };
+      const remaining = Math.max(0, session.endTime - now);
+      sessionPatch.focusSession = { ...session, pausedRemainingMs: remaining };
       try { await chrome.alarms.clear('session-end'); } catch (_) {}
-    } else if (!isSnoozed && fs.pausedRemainingMs) {
+    } else if (!isSnoozed && session.pausedRemainingMs) {
       // Resume: re-extend endTime and recreate the alarm
-      const newEnd = now + fs.pausedRemainingMs;
-      sessionPatch.focusSession = { ...fs, endTime: newEnd, pausedRemainingMs: null };
-      try { await chrome.alarms.create('session-end', { delayInMinutes: fs.pausedRemainingMs / 60000 }); } catch (_) {}
+      const newEnd = now + session.pausedRemainingMs;
+      sessionPatch.focusSession = { ...session, endTime: newEnd, pausedRemainingMs: null };
+      try { await chrome.alarms.create('session-end', { delayInMinutes: session.pausedRemainingMs / 60000 }); } catch (_) {}
     }
   }
 
@@ -351,12 +289,20 @@ async function syncBlockingState() {
     addRules: rules,
   });
 
-  // Badge
-  const badgeText = isFocusSession ? '\u25B6' : (block ? 'ON' : '');
-  await chrome.action.setBadgeText({ text: badgeText });
-  if (block) {
-    await chrome.action.setBadgeBackgroundColor({ color: '#c8191c' });
+  // Badge: minutes left in a session, "zz" while snoozed, ON while blocking.
+  const liveSession = sessionPatch.focusSession || session;
+  let badgeText = '', badgeColor = '#c8191c';
+  if (isSnoozed) {
+    badgeText = 'zz'; badgeColor = '#6b6b76';
+  } else if (liveSession) {
+    badgeText = `${Math.max(1, Math.ceil(sessionRemainingMs(liveSession, now) / 60000))}m`;
+    badgeColor = liveSession.hardcore ? '#8d1013' : '#c8191c';
+  } else if (block) {
+    badgeText = 'ON';
   }
+  await chrome.action.setBadgeText({ text: badgeText });
+  await chrome.action.setBadgeBackgroundColor({ color: badgeColor });
+  try { await chrome.action.setBadgeTextColor({ color: '#ffffff' }); } catch (_) {}
 
   if (block && !local.blocking) {
     await startSession();
@@ -388,8 +334,8 @@ async function endSession(local) {
     return;
   }
 
-  const today = todayStr();
-  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  const today = CF.dayKey();
+  const yesterday = CF.dayKey(CF.addDays(new Date(), -1));
   let streak = local.currentStreak || 0;
 
   if (local.lastSessionDate !== today) {
@@ -409,30 +355,45 @@ async function endSession(local) {
   });
 }
 
+// ─── Counters bumped from the UI ──────────────────────────────────────────────
+// These go through the queue and ensureToday() so a bump that lands just after
+// midnight archives yesterday first instead of overwriting it.
+
+function bumpCounters(fields) {
+  return enqueue(async () => {
+    const local = await ensureToday(await getLocalState());
+    const patch = {};
+    for (const [key, todayKey] of fields) {
+      patch[key] = (local[key] || 0) + 1;
+      patch[todayKey] = (local[todayKey] || 0) + 1;
+    }
+    await chrome.storage.local.set(patch);
+    return { ...local, ...patch };
+  });
+}
+
 // ─── Break reminder ───────────────────────────────────────────────────────────
+// Measured from when the practice tab opened (or the last reminder), so it
+// fires every N minutes of continuous practice and restarts with a fresh tab.
 
 async function checkBreakReminder(settings, local) {
   if (!settings.breakReminder || settings.breakReminder <= 0) return;
-  if (!local.sessionStart) return;
+  if (!local.focusClockStart) return;
 
-  const elapsedMin = (Date.now() - local.sessionStart) / 60000;
-  if (elapsedMin >= settings.breakReminder) {
-    // Only notify once per threshold crossing — use alarm to avoid repeats
-    const existing = await chrome.alarms.get('break-reminder');
-    if (!existing) {
-      try {
-        await chrome.notifications.create('break-reminder', {
-          type: 'basic',
-          iconUrl: 'icons/icon128.png',
-          title: 'Time for a break!',
-          message: `You've been focused for ${Math.round(elapsedMin)} minutes. Stand up, stretch, hydrate.`,
-        });
-      } catch (_) {
-        // Notifications permission may not be granted — fail silently
-      }
-      // Set alarm to re-check in another breakReminder minutes
-      await chrome.alarms.create('break-reminder', { delayInMinutes: settings.breakReminder });
-    }
+  const since = Math.max(local.focusClockStart, local.lastBreakAt || 0);
+  if (Date.now() - since < settings.breakReminder * 60000) return;
+
+  const totalMin = Math.round((Date.now() - local.focusClockStart) / 60000);
+  await chrome.storage.local.set({ lastBreakAt: Date.now() });
+  try {
+    await chrome.notifications.create('break-reminder', {
+      type: 'basic',
+      iconUrl: 'icons/icon128.png',
+      title: 'Time for a break',
+      message: `You've been at it for ${CF.fmtDuration(totalMin)}. Stand up, stretch, drink some water.`,
+    });
+  } catch (_) {
+    // Notifications permission may not be granted — fail silently
   }
 }
 
@@ -451,44 +412,86 @@ chrome.alarms.onAlarm.addListener(async alarm => {
     await chrome.storage.sync.set({ snoozeUntil: 0 });
     await syncBlockingState();
   } else if (alarm.name === 'schedule-check') {
-    // Also check break reminder on each tick
-    const [settings, local] = await Promise.all([getSettings(), getLocalState()]);
-    await checkBreakReminder(settings, local);
     await syncBlockingState();
+    await enqueue(async () => {
+      const [settings, local] = await Promise.all([getSettings(), getLocalState()]);
+      await checkBreakReminder(settings, local);
+    });
   } else if (alarm.name === 'session-end') {
-    await chrome.storage.local.set({ focusSession: null });
+    const local = await enqueue(async () => {
+      const l = await ensureToday(await getLocalState());
+      const done = (l.focusSessionsCompleted || 0) + 1;
+      await chrome.storage.local.set({ focusSession: null, focusSessionsCompleted: done });
+      return l;
+    });
     await syncBlockingState();
+    const mins = (local.focusSession && local.focusSession.duration) || 0;
     try {
       await chrome.notifications.create('session-complete', {
         type: 'basic',
         iconUrl: 'icons/icon128.png',
-        title: 'Focus session complete!',
-        message: 'Great work! Your focus session has ended.',
+        title: 'Focus session complete',
+        message: `${CF.fmtDuration(mins)} done. Today: ${local.todaySolved || 0} solved, ` +
+                 `${local.todayBlocks || 0} AI visits resisted.`,
       });
     } catch (_) {}
-  } else if (alarm.name === 'break-reminder') {
-    // Clear so it can fire again next interval
-    await chrome.alarms.clear('break-reminder');
   } else if (alarm.name === 'midnight-reset') {
     // Force today's counters to roll over and re-sync the badge/UI.
-    const local = await getLocalState();
-    await ensureToday(local);
     await syncBlockingState();
   }
 });
 
 // ─── Messages from popup / options / blocked page ─────────────────────────────
 
+function clampInt(v, min, max, fallback) {
+  const n = Math.round(Number(v));
+  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
+}
+
+async function openPracticeTab(sender, replaceSender) {
+  const settings = await getSettings();
+  const allTabs = await chrome.tabs.query({});
+  const existing = allTabs.find(t => CF.isFocusUrl(t.url, settings));
+  const senderTab = sender && sender.tab;
+
+  if (existing) {
+    try {
+      await chrome.tabs.update(existing.id, { active: true });
+      await chrome.windows.update(existing.windowId, { focused: true });
+    } catch (_) {}
+    // The block page has done its job once the user is back on the problem.
+    if (replaceSender && senderTab && senderTab.id !== existing.id) {
+      try { await chrome.tabs.remove(senderTab.id); } catch (_) {}
+    }
+    return { ok: true, focused: true };
+  }
+
+  const url = CF.firstPracticeUrl(settings);
+  if (replaceSender && senderTab) {
+    await chrome.tabs.update(senderTab.id, { url });
+  } else {
+    await chrome.tabs.create({ url });
+  }
+  return { ok: true, opened: url };
+}
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  const _sender = sender;
   (async () => {
     try {
       switch (msg.type) {
 
         case 'START_SESSION': {
-          const { duration, hardcore } = msg;
+          const duration = clampInt(msg.duration, 5, 240, 50);
+          const hardcore = !!msg.hardcore;
           const endTime = Date.now() + duration * 60000;
-          await chrome.storage.local.set({ focusSession: { endTime, hardcore, duration } });
+          await enqueue(async () => {
+            const l = await getLocalState();
+            if (activeSession(l) && activeSession(l).hardcore) throw new Error('hardcore');
+            await chrome.storage.local.set({ focusSession: { endTime, hardcore, duration, startedAt: Date.now() } });
+          });
+          // Starting a session means you want blocking now — cancel any snooze.
+          await chrome.storage.sync.set({ snoozeUntil: 0, sessionLength: duration });
+          await chrome.alarms.clear('snooze-end');
           await chrome.alarms.create('session-end', { delayInMinutes: duration });
           await syncBlockingState();
           sendResponse({ ok: true });
@@ -497,7 +500,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
         case 'END_SESSION': {
           const lEnd = await getLocalState();
-          if (lEnd.focusSession && lEnd.focusSession.hardcore) {
+          const s = activeSession(lEnd);
+          if (s && s.hardcore) {
             sendResponse({ ok: false, reason: 'hardcore' });
             return;
           }
@@ -510,11 +514,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
         case 'SNOOZE': {
           const l = await getLocalState();
-          if (l.focusSession && l.focusSession.hardcore) {
+          const s = activeSession(l);
+          if (s && s.hardcore) {
             sendResponse({ ok: false, reason: 'hardcore' });
             return;
           }
-          const minutes = msg.minutes || 15;
+          const minutes = clampInt(msg.minutes, 1, 240, 15);
           const until = Date.now() + minutes * 60000;
           await chrome.storage.sync.set({ snoozeUntil: until });
           await chrome.alarms.create('snooze-end', { delayInMinutes: minutes });
@@ -534,29 +539,30 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         case 'EARN_UNLOCK': {
           // Earned unlock — only honored once the user has actually put in the time.
           const [hSettings, hl] = await Promise.all([getSettings(), getLocalState()]);
-          if (hl.focusSession && hl.focusSession.hardcore) {
+          const s = activeSession(hl);
+          if (s && s.hardcore) {
             sendResponse({ ok: false, reason: 'hardcore' });
             return;
           }
-          const tiers = hSettings.hintTiers || { unlockAt: 35, unlockMinutes: 10 };
+          const tiers = { ...DEFAULT_SETTINGS.hintTiers, ...(hSettings.hintTiers || {}) };
           const elapsedMin = Math.floor(effectiveElapsedMs(hl) / 60000);
-          if (elapsedMin < (tiers.unlockAt || 35)) {
+          if (elapsedMin < tiers.unlockAt) {
             sendResponse({ ok: false, reason: 'not_earned', elapsed: elapsedMin, required: tiers.unlockAt });
             return;
           }
-          const unlockMin = msg.minutes || tiers.unlockMinutes || 10;
+          const unlockMin = tiers.unlockMinutes;
           const unlockUntil = Date.now() + unlockMin * 60000;
           await chrome.storage.sync.set({ snoozeUntil: unlockUntil });
           await chrome.alarms.create('snooze-end', { delayInMinutes: unlockMin });
           // NOTE: we deliberately do NOT reset problemStartTime — the user has
           // earned the unlock; after the snooze ends it stays earned until they
-          // close the focus tab.
+          // close the focus tab or mark the problem solved.
           await syncBlockingState();
           // After rules are cleared, redirect the requesting tab to the AI site.
           // Doing it server-side avoids any race between client navigation and DNR rule update.
-          if (_sender && _sender.tab && msg.targetUrl) {
+          if (sender && sender.tab && msg.targetUrl) {
             try {
-              await chrome.tabs.update(_sender.tab.id, { url: msg.targetUrl });
+              await chrome.tabs.update(sender.tab.id, { url: msg.targetUrl });
             } catch (_) {}
           }
           sendResponse({ ok: true, unlockMin });
@@ -567,31 +573,61 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           // Focus an already-open practice tab if there is one, otherwise open
           // the first enabled platform. Opening the tab is what starts the
           // count-up clock — syncBlockingState picks it up from the tab event.
-          const oSettings = await getSettings();
-          const allTabs = await chrome.tabs.query({});
-          const existing = allTabs.find(t => isFocusTab(t, oSettings));
-          if (existing) {
-            try {
-              await chrome.tabs.update(existing.id, { active: true });
-              await chrome.windows.update(existing.windowId, { focused: true });
-            } catch (_) {}
-            sendResponse({ ok: true, focused: true });
-            return;
-          }
-          const first = oSettings.enabledPlatforms[0] || 'codeforces';
-          const url = PLATFORM_URLS[first] ||
-            (oSettings.customPlatforms && oSettings.customPlatforms[0]
-              ? `https://${oSettings.customPlatforms[0].domain}`
-              : PLATFORM_URLS.codeforces);
-          await chrome.tabs.create({ url });
-          sendResponse({ ok: true, opened: url });
+          // With replaceSender (the block page), the calling tab is closed or
+          // reused instead of leaving a dead block page behind.
+          sendResponse(await openPracticeTab(sender, !!msg.replaceSender));
           return;
         }
 
         case 'RESET_UNLOCK_TIMER': {
           // User manually restarts the cycle (e.g. switched to a new problem)
-          await chrome.storage.local.set({ problemStartTime: Date.now() });
+          await enqueue(async () => {
+            const l = await getLocalState();
+            const now = Date.now();
+            await chrome.storage.local.set({
+              problemStartTime: l.problemStartTime ? now : null,
+              problemPausedAt: l.problemPausedAt ? now : null,
+            });
+          });
           sendResponse({ ok: true });
+          return;
+        }
+
+        case 'RECORD_SOLVED': {
+          const l = await bumpCounters([['problemsSolved', 'todaySolved']]);
+          // A solved problem starts the next one's unlock clock from zero.
+          if (!msg.keepTimer) {
+            await enqueue(async () => {
+              const cur = await getLocalState();
+              if (!cur.problemStartTime) return;
+              const now = Date.now();
+              await chrome.storage.local.set({
+                problemStartTime: now,
+                problemPausedAt: cur.problemPausedAt ? now : null,
+              });
+            });
+          }
+          sendResponse({ ok: true, todaySolved: l.todaySolved, problemsSolved: l.problemsSolved });
+          return;
+        }
+
+        case 'UNDO_SOLVED': {
+          const l = await enqueue(async () => {
+            const cur = await ensureToday(await getLocalState());
+            const patch = {
+              problemsSolved: Math.max(0, (cur.problemsSolved || 0) - 1),
+              todaySolved: Math.max(0, (cur.todaySolved || 0) - 1),
+            };
+            await chrome.storage.local.set(patch);
+            return { ...cur, ...patch };
+          });
+          sendResponse({ ok: true, todaySolved: l.todaySolved });
+          return;
+        }
+
+        case 'RECORD_BLOCK': {
+          const l = await bumpCounters([['aiBlocksAvoided', 'todayBlocks']]);
+          sendResponse({ ok: true, todayBlocks: l.todayBlocks });
           return;
         }
 
@@ -603,22 +639,21 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
         case 'GET_STATE': {
           const settings = await getSettings();
-          let local = await getLocalState();
-          local = await ensureToday(local);
+          const local = await enqueue(async () => ensureToday(await getLocalState()));
           const tabs = await chrome.tabs.query({});
-          const focusTabCount = tabs.filter(t => isFocusTab(t, settings)).length;
+          const focusTabCount = tabs.filter(t => CF.isFocusUrl(t.url, settings)).length;
 
           // Calculate live today minutes (include current active session)
           let liveTodayMinutes = local.todayMinutes || 0;
           if (local.sessionStart) {
-            liveTodayMinutes += Math.round((Date.now() - local.sessionStart) / 60000);
+            const midnight = new Date(); midnight.setHours(0, 0, 0, 0);
+            liveTodayMinutes += Math.round((Date.now() - Math.max(local.sessionStart, midnight.getTime())) / 60000);
           }
 
           // Has the AI unlock been earned? Never, during a hardcore session.
-          const tiers = settings.hintTiers || { unlockAt: 35, unlockMinutes: 10 };
-          const nowTs = Date.now();
-          const hardcoreActive = !!(local.focusSession && local.focusSession.hardcore &&
-            (local.focusSession.pausedRemainingMs > 0 || nowTs < local.focusSession.endTime));
+          const tiers = { ...DEFAULT_SETTINGS.hintTiers, ...(settings.hintTiers || {}) };
+          const session = activeSession(local);
+          const hardcoreActive = !!(session && session.hardcore);
           const elapsedMs = hardcoreActive ? 0 : effectiveElapsedMs(local);
           const unlockElapsed = Math.floor(elapsedMs / 60000);
           const unlockEarned = !hardcoreActive && unlockElapsed >= tiers.unlockAt;
@@ -626,6 +661,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           sendResponse({
             settings, local, focusTabCount, liveTodayMinutes,
             unlockEarned, unlockElapsed, hintTiers: tiers, hardcoreActive,
+            streak: liveStreak(local),
+            session,
             // Convenience for clients: send the resolved start + pause so they can
             // tick locally between polls without re-deriving from raw fields.
             problemStartTime: local.problemStartTime,
@@ -636,6 +673,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       }
       sendResponse({ ok: true });
     } catch (err) {
+      if (err && err.message === 'hardcore') {
+        sendResponse({ ok: false, reason: 'hardcore' });
+        return;
+      }
       console.error('CF Focus: message handler error', err);
       sendResponse({ ok: false, error: err.message });
     }
@@ -648,7 +689,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 chrome.commands.onCommand.addListener(async command => {
   if (command === 'toggle-snooze') {
     const [settings, local] = await Promise.all([getSettings(), getLocalState()]);
-    if (local.focusSession && local.focusSession.hardcore) return;
+    const s = activeSession(local);
+    if (s && s.hardcore) return;
     if (settings.snoozeUntil && Date.now() < settings.snoozeUntil) {
       await chrome.storage.sync.set({ snoozeUntil: 0 });
       await chrome.alarms.clear('snooze-end');
@@ -662,30 +704,36 @@ chrome.commands.onCommand.addListener(async command => {
 });
 
 // ─── Storage change listener ──────────────────────────────────────────────────
+// Snooze changes are always followed by an explicit sync; theme and the
+// remembered session length don't affect blocking at all.
 
+const NO_SYNC_KEYS = new Set(['snoozeUntil', 'theme', 'sessionLength']);
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === 'sync' && !('snoozeUntil' in changes)) debouncedSync();
+  if (area === 'sync' && Object.keys(changes).some(k => !NO_SYNC_KEYS.has(k))) debouncedSync();
 });
 
 // ─── Init — ensure alarms exist on every SW wake ──────────────────────────────
+
+function nextLocalMidnight() {
+  const next = new Date();
+  next.setHours(24, 0, 10, 0); // 00:00:10 next day
+  return next.getTime();
+}
 
 async function ensureAlarms() {
   const existing = await chrome.alarms.get('schedule-check');
   if (!existing) {
     await chrome.alarms.create('schedule-check', { periodInMinutes: 1 });
   }
-  // Midnight rollover — guarantees today's counters reset even if no events fire across midnight.
+  // Midnight rollover — guarantees today's counters reset even if no events
+  // fire across midnight. One-shot and re-armed on each wake, so it tracks
+  // local midnight through DST changes instead of drifting by an hour.
   const midnightAlarm = await chrome.alarms.get('midnight-reset');
-  if (!midnightAlarm) {
-    const next = new Date();
-    next.setHours(24, 0, 10, 0); // 00:00:10 next day
-    await chrome.alarms.create('midnight-reset', {
-      when: next.getTime(),
-      periodInMinutes: 24 * 60,
-    });
+  if (!midnightAlarm || midnightAlarm.periodInMinutes || midnightAlarm.scheduledTime < Date.now()) {
+    await chrome.alarms.create('midnight-reset', { when: nextLocalMidnight() });
   }
   const local = await getLocalState();
-  if (local.focusSession && local.focusSession.endTime > Date.now()) {
+  if (local.focusSession && !local.focusSession.pausedRemainingMs) {
     const sessionAlarm = await chrome.alarms.get('session-end');
     if (!sessionAlarm) {
       const remaining = (local.focusSession.endTime - Date.now()) / 60000;
@@ -702,6 +750,12 @@ async function ensureAlarms() {
   }
 }
 
+chrome.alarms.onAlarm.addListener(alarm => {
+  if (alarm.name === 'midnight-reset') {
+    chrome.alarms.create('midnight-reset', { when: nextLocalMidnight() });
+  }
+});
+
 async function init() {
   await ensureAlarms();
   await syncBlockingState();
@@ -712,9 +766,9 @@ chrome.runtime.onInstalled.addListener(async details => {
   if (details.reason === 'install') {
     // First-run: open the options page so the user can configure platforms and PIN.
     try {
-      await chrome.tabs.create({ url: chrome.runtime.getURL('options.html') });
+      await chrome.tabs.create({ url: chrome.runtime.getURL('options.html?welcome=1') });
     } catch (_) {}
   }
 });
 chrome.runtime.onStartup.addListener(init);
-ensureAlarms().then(() => syncBlockingState());
+init();
