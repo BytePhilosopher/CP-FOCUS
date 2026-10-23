@@ -3,468 +3,384 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Focus Mode &mdash; CF Focus</title>
+  <title>404 Not Found &mdash; CF Focus</title>
+  <script src="theme.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    /* Light theme: the bright signal red. */
     :root {
-      --bg:    #080808;
-      --s1:    #0e0e0e;
-      --s2:    #141414;
-      --b1:    #1a1a1a;
-      --b2:    #252525;
-      /* Brand red — bloody crimson — used for "blocked" intensity */
-      --red:   #c8191c;
-      --red-d: rgba(200,25,28,0.08);
-      --red-m: rgba(200,25,28,0.22);
-      --red-h: rgba(200,25,28,0.45);
-      /* Tier-1/2 use a softer red that reads as "warming up" */
-      --red2:   #ff5a5d;
-      --red2-d: rgba(255,90,93,0.08);
-      --red2-m: rgba(255,90,93,0.25);
-      /* Tier-3 (earned) uses pure white on red — the visual reward */
-      --white: #ffffff;
-      --text:  #f0f0f0;
-      --text2: #888888;
-      --muted: #444444;
-      --dim:   rgba(255,255,255,0.08);
-      --mono:  'JetBrains Mono', monospace;
-      --sans:  'Inter', sans-serif;
+      --red:      #c8191c;
+      --red-deep: #8d1013;
+      --red-lit:  #e8262a;
+      --ink:      #12080a;
+      --white:    #ffffff;
+      /* Surfaces that sit on top of the red field (clock face, cards, ribbon) */
+      --face:     #ffffff;
+      --face-ink: #12080a;
+      --face-sub: rgba(18,8,10,0.72);
+      --mono: 'JetBrains Mono', ui-monospace, monospace;
+      --sans: 'Inter', system-ui, sans-serif;
+      --clock: 268px;
     }
 
+    /* Dark theme: same red identity, dialled down to a deep ember so it isn't
+       a wall of bright red at night. Surfaces go dark, text stays high-contrast. */
+    :root[data-theme="dark"] {
+      --red:      #7d1114;
+      --red-deep: #3d0709;
+      --red-lit:  #a81a1e;
+      --ink:      #f5eaea;
+      --face:     #171113;
+      --face-ink: #ffffff;
+      --face-sub: rgba(255,255,255,0.78);
+    }
+
+    html, body { min-height: 100%; }
+
     body {
-      background: var(--bg);
-      color: var(--text);
+      background: var(--red);
+      color: var(--white);
       font-family: var(--sans);
       min-height: 100vh;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 48px 24px;
+      padding: 40px 20px;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
     }
 
-    body::before {
-      content: '';
-      position: fixed;
-      top: 0; left: 50%; transform: translateX(-50%);
-      width: 700px; height: 280px;
-      background: radial-gradient(ellipse at 50% 0%, rgba(200,25,28,0.05) 0%, transparent 70%);
-      pointer-events: none;
+    /* ══ Animated red + white background ══════════════════════════════════════
+       Three stacked layers, all behind the content:
+         1. a slow red gradient wash that breathes
+         2. two drifting soft white blobs
+         3. wide diagonal white stripes scrolling past
+       Everything here is decorative and non-interactive.                        */
+    .bg { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+
+    .bg-wash {
+      position: absolute; inset: -30%;
+      background:
+        radial-gradient(60% 55% at 20% 20%, var(--red-lit) 0%, transparent 60%),
+        radial-gradient(55% 50% at 85% 75%, var(--red-deep) 0%, transparent 62%),
+        linear-gradient(140deg, var(--red) 0%, var(--red-deep) 100%);
+      animation: wash 22s ease-in-out infinite alternate;
+    }
+    @keyframes wash {
+      from { transform: scale(1)    rotate(0deg); }
+      to   { transform: scale(1.12) rotate(6deg); }
     }
 
-    .container { max-width: 520px; width: 100%; position: relative; z-index: 1; }
+    .bg-blob {
+      position: absolute; border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, rgba(255,255,255,0.30), rgba(255,255,255,0) 68%);
+      filter: blur(6px);
+    }
+    .bg-blob.a { width: 620px; height: 620px; top: -180px; left: -160px;  animation: drift-a 26s ease-in-out infinite alternate; }
+    .bg-blob.b { width: 520px; height: 520px; bottom: -200px; right: -140px; animation: drift-b 31s ease-in-out infinite alternate; }
+    @keyframes drift-a {
+      from { transform: translate3d(0,0,0)        scale(1); }
+      to   { transform: translate3d(140px,90px,0) scale(1.18); }
+    }
+    @keyframes drift-b {
+      from { transform: translate3d(0,0,0)          scale(1.1); }
+      to   { transform: translate3d(-120px,-70px,0) scale(0.92); }
+    }
 
-    /* ── Topbar ── */
-    .topbar {
+    /* Wide flat diagonal stripes — the "ribbon" motif the buttons echo. */
+    .bg-stripes {
+      position: absolute; inset: -40%;
+      background: repeating-linear-gradient(
+        118deg,
+        rgba(255,255,255,0.11) 0px,
+        rgba(255,255,255,0.11) 46px,
+        rgba(255,255,255,0)   46px,
+        rgba(255,255,255,0)   132px
+      );
+      animation: stripes 30s linear infinite;
+    }
+    @keyframes stripes {
+      from { transform: translate3d(0,0,0); }
+      to   { transform: translate3d(-264px, 0, 0); }
+    }
+
+    /* Fine grain so the flat red doesn't band on large displays. */
+    .bg-grain {
+      position: absolute; inset: 0; opacity: 0.30; mix-blend-mode: overlay;
+      background-image: repeating-linear-gradient(0deg,
+        rgba(255,255,255,0.05) 0 1px, rgba(0,0,0,0) 1px 3px);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .bg-wash, .bg-blob, .bg-stripes { animation: none; }
+    }
+
+    /* ══ Content ═════════════════════════════════════════════════════════════ */
+    .container {
+      position: relative; z-index: 1;
+      width: 100%; max-width: 560px;
+      display: grid; grid-template-columns: 1fr; gap: 4px;
+      justify-items: center;
+    }
+    .col { display: flex; flex-direction: column; align-items: center; width: 100%; }
+
+    /* Roomier screens get a bigger clock and headline rather than more columns —
+       the page only has one thing to say. */
+    @media (min-width: 960px) {
+      body { padding: 56px 44px; }
+      .container { max-width: 620px; }
+      :root { --clock: 300px; }
+      .four-oh-four { font-size: 40px; }
+      .subtitle { font-size: 13.5px; max-width: 440px; }
+    }
+    @media (min-width: 1500px) {
+      :root { --clock: 340px; }
+      .container { max-width: 680px; }
+      .four-oh-four { font-size: 46px; letter-spacing: 4px; }
+    }
+
+    /* ── Brand + session strip ── */
+    .top-row {
       display: flex; align-items: center; justify-content: center;
-      margin-bottom: 36px;
+      gap: 10px; flex-wrap: wrap; margin-bottom: 26px;
     }
-    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,0.14);
+      border: 1px solid rgba(255,255,255,0.30);
+      border-radius: 999px; padding: 5px 13px 5px 6px;
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    }
     .brand-logo {
-      width: 28px; height: 28px; background: #fff; border-radius: 7px;
+      width: 21px; height: 21px; background: var(--white); border-radius: 6px;
       display: flex; align-items: center; justify-content: center;
-      font-family: var(--mono); font-weight: 700; font-size: 11px;
-      color: #000; letter-spacing: -0.5px; flex-shrink: 0;
+      font-family: var(--mono); font-weight: 800; font-size: 9px; color: var(--red);
     }
-    .brand-name { font-size: 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--text); }
+    .brand-name {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.4px; color: var(--white);
+    }
 
-    /* ── Session card ── */
     #sessionCard {
-      display: none;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 14px;
-      padding: 18px 22px; margin-bottom: 28px;
-      align-items: center; justify-content: space-between; gap: 16px;
-    }
-    .session-card-left { display: flex; flex-direction: column; gap: 5px; }
-    .session-pill {
-      display: inline-flex; align-items: center; gap: 5px;
-      font-family: var(--mono); font-size: 9px; font-weight: 600;
-      letter-spacing: 0.8px; text-transform: uppercase; color: var(--text);
+      display: none; align-items: center; gap: 9px;
+      background: rgba(0,0,0,0.22);
+      border: 1px solid rgba(255,255,255,0.26);
+      border-radius: 999px; padding: 5px 14px;
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
     }
     .session-dot {
-      width: 5px; height: 5px; border-radius: 50%; background: #fff;
-      animation: breathe 2s ease-in-out infinite;
+      width: 6px; height: 6px; border-radius: 50%; background: var(--white);
+      animation: breathe 2s ease-in-out infinite; flex-shrink: 0;
     }
-    @keyframes breathe { 0%,100%{opacity:1} 50%{opacity:0.35} }
-    .session-card-sub { font-size: 11px; color: var(--text2); font-family: var(--mono); }
+    @keyframes breathe { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .session-pill {
+      font-family: var(--mono); font-size: 9px; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase; color: rgba(255,255,255,0.9);
+    }
     .session-timer-big {
-      font-family: var(--mono); font-size: 40px; font-weight: 700;
-      color: #fff; letter-spacing: -2px; line-height: 1; flex-shrink: 0;
+      font-family: var(--mono); font-size: 13px; font-weight: 800;
+      color: var(--white); letter-spacing: -0.3px;
     }
     .hc-badge {
-      display: none; align-items: center; gap: 5px;
-      font-family: var(--mono); font-size: 9px; font-weight: 700;
-      letter-spacing: 0.5px; text-transform: uppercase;
-      color: var(--red); background: var(--red-d);
-      border: 1px solid var(--red-m); padding: 3px 9px;
-      border-radius: 100px; width: fit-content;
+      display: none; align-items: center;
+      font-family: var(--mono); font-size: 9px; font-weight: 800;
+      letter-spacing: 1px; text-transform: uppercase;
+      color: var(--red); background: var(--white);
+      border-radius: 999px; padding: 2px 8px;
     }
 
-    /* ── Hint progress timeline ─────────────────────────── */
-    .hint-timeline {
-      background: var(--s1); border: 1px solid var(--b1);
-      border-radius: 14px; padding: 20px 22px;
-      margin-bottom: 24px;
-    }
-    .hint-timeline-header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 14px;
-    }
-    .hint-timeline-title {
-      font-family: var(--mono); font-size: 9px; font-weight: 600;
-      letter-spacing: 1.2px; text-transform: uppercase; color: var(--text2);
-    }
-    .hint-elapsed {
-      font-family: var(--mono); font-size: 12px; font-weight: 700;
-      color: var(--text);
-    }
-
-    /* Track bar */
-    .hint-track {
-      position: relative; height: 6px; background: var(--b2);
-      border-radius: 3px; overflow: hidden; margin-bottom: 16px;
-    }
-    .hint-track-fill {
-      height: 100%; border-radius: 3px;
-      transition: width 0.5s linear, background 0.3s ease;
-    }
-    .hint-track-fill.t0 { background: var(--red); }
-    .hint-track-fill.t1 { background: var(--red2); }
-    .hint-track-fill.t2 { background: var(--red2); }
-    .hint-track-fill.t3 { background: var(--white); }
-
-    /* Tier steps */
-    .hint-steps {
-      display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
-    }
-    .hint-step {
-      text-align: center; padding: 10px 4px;
-      border-radius: 10px; border: 1px solid var(--b1);
-      background: var(--bg); transition: all 0.3s;
-    }
-    .hint-step.active {
-      border-color: var(--red2-m); background: var(--red2-d);
-    }
-    .hint-step.active.t0 {
-      border-color: var(--red-h); background: var(--red-d);
-    }
-    .hint-step.active.t3 {
-      border-color: var(--white); background: rgba(255,255,255,0.06);
-    }
-    .hint-step-icon {
-      width: 22px; height: 22px;
-      margin: 0 auto 4px; line-height: 0;
-      color: var(--muted);
-      transition: color 0.3s;
+    /* ── The clock: big white disc, black numerals ── */
+    .clock-wrap {
+      position: relative;
+      width: var(--clock); height: var(--clock);
       display: flex; align-items: center; justify-content: center;
+      margin-bottom: 26px;
     }
-    .hint-step-icon svg { width: 100%; height: 100%; display: block; }
-    .hint-step.reached .hint-step-icon { color: var(--text2); }
-    .hint-step.active .hint-step-icon { color: var(--text); }
-    .hint-step.active.t0 .hint-step-icon { color: var(--red); }
-    .hint-step.active.t3 .hint-step-icon { color: var(--white); }
-    .hint-step-label {
-      font-family: var(--mono); font-size: 9px; font-weight: 600;
-      letter-spacing: 0.5px; text-transform: uppercase;
-      color: var(--muted); transition: color 0.3s;
+    /* Countdown ring riding just outside the disc */
+    .clock-ring { position: absolute; inset: -18px; transform: rotate(-90deg); }
+    /* Dark track so the white progress arc actually reads against it. */
+    .clock-ring .track { stroke: rgba(0,0,0,0.26); }
+    .clock-ring .arc {
+      stroke: var(--white);
+      filter: drop-shadow(0 0 6px rgba(255,255,255,0.55));
+      transition: stroke-dashoffset 0.9s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    .hint-step.reached .hint-step-label { color: var(--text2); }
-    .hint-step.active .hint-step-label { color: var(--text); }
-    .hint-step-time {
-      font-family: var(--mono); font-size: 10px; color: var(--muted);
-      margin-top: 2px; transition: color 0.3s;
+    .clock-face {
+      width: 100%; height: 100%; border-radius: 50%;
+      background: var(--face);
+      box-shadow:
+        0 26px 70px rgba(0,0,0,0.32),
+        0 0 0 12px rgba(255,255,255,0.14);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      animation: clock-breathe 5s ease-in-out infinite;
     }
-    .hint-step.reached .hint-step-time,
-    .hint-step.active .hint-step-time { color: var(--text2); }
+    @keyframes clock-breathe {
+      0%,100% { box-shadow: 0 26px 70px rgba(0,0,0,0.32), 0 0 0 12px rgba(255,255,255,0.14); }
+      50%     { box-shadow: 0 26px 70px rgba(0,0,0,0.32), 0 0 0 20px rgba(255,255,255,0.07); }
+    }
+    @media (prefers-reduced-motion: reduce) { .clock-face { animation: none; } }
 
-    /* ── Current tier content card ──────────────────────── */
-    .tier-card {
-      display: none;
-      background: var(--s1); border: 1px solid var(--b1);
-      border-radius: 14px; padding: 22px 24px;
-      margin-bottom: 24px;
-      transition: border-color 0.3s;
-    }
-    .tier-card.visible { display: block; }
-    .tier-card.t1 { border-color: var(--red2-m); }
-    .tier-card.t2 { border-color: var(--red2-m); }
-    .tier-card.t3 { border-color: rgba(255,255,255,0.4); }
-
-    .tier-card-header {
-      display: flex; align-items: center; gap: 10px;
-      margin-bottom: 12px;
-    }
-    .tier-card-badge {
+    .clock-eyebrow {
       font-family: var(--mono); font-size: 9px; font-weight: 700;
-      letter-spacing: 0.8px; text-transform: uppercase;
-      padding: 3px 10px; border-radius: 100px;
+      letter-spacing: 1.6px; text-transform: uppercase;
+      color: var(--face-sub); margin-bottom: 6px; text-align: center;
     }
-    .tier-card-badge.t1 { background: var(--red2-d); color: var(--red2); border: 1px solid var(--red2-m); }
-    .tier-card-badge.t2 { background: var(--red2-d); color: var(--red2); border: 1px solid var(--red2-m); }
-    .tier-card-badge.t3 { background: rgba(255,255,255,0.06); color: var(--white); border: 1px solid rgba(255,255,255,0.4); }
-    .tier-card-title {
-      font-size: 15px; font-weight: 700; color: var(--text);
-      letter-spacing: -0.3px;
+    .clock-time {
+      font-family: var(--mono); font-size: 62px; font-weight: 800;
+      color: var(--face-ink); letter-spacing: -3.5px; line-height: 0.92;
+      font-variant-numeric: tabular-nums;
     }
-    .tier-card-body {
-      font-size: 13px; color: var(--text2); line-height: 1.7;
+    .clock-cap {
+      font-family: var(--mono); font-size: 10px; font-weight: 600;
+      color: var(--face-sub); margin-top: 8px; text-align: center;
+      padding: 0 26px; line-height: 1.4;
     }
-    .tier-card-body strong { color: var(--text); font-weight: 600; }
+    .clock-face.unlocked .clock-time { color: var(--red-lit); }
 
-    .btn-unlock-ai {
-      display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-      width: 100%; margin-top: 16px; padding: 13px;
-      background: var(--white); border: none; border-radius: 10px;
-      color: #000; font-family: var(--sans); font-size: 13px; font-weight: 700;
-      cursor: pointer; transition: opacity 0.15s, transform 0.1s, background 0.15s;
-    }
-    .btn-unlock-ai:hover { background: #e8e8e8; }
-    .btn-unlock-ai:active { transform: scale(0.97); }
-    .btn-unlock-ai:disabled {
-      background: transparent; color: var(--muted);
-      border: 1px solid var(--b2); cursor: not-allowed;
-    }
-
-    /* ── Headline ── */
-    .stop-icon {
-      width: 56px; height: 56px;
-      background: var(--red-d); border: 1px solid var(--red-m);
-      border-radius: 16px;
-      display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 20px; color: var(--red);
-    }
-    h1 {
-      font-size: 28px; font-weight: 700;
-      letter-spacing: -1px; line-height: 1.1;
-      color: var(--text); margin-bottom: 8px; text-align: center;
-    }
-    .headline-accent { color: var(--red); }
-    .subtitle {
-      font-size: 14px; color: var(--text2); line-height: 1.6;
+    /* ── 404 headline ── */
+    .four-oh-four {
       text-align: center; margin-bottom: 8px;
+      font-family: var(--mono); font-weight: 800; color: var(--white);
+      font-size: 34px; letter-spacing: 3px; line-height: 1;
+      text-shadow: 0 3px 22px rgba(0,0,0,0.28);
     }
-    #siteBadgeWrap { display: none; text-align: center; margin-bottom: 20px; }
+    .go-work {
+      text-align: center; color: var(--white);
+      font-size: 14px; font-weight: 700; letter-spacing: 4px;
+      text-transform: uppercase; opacity: 0.95; margin-bottom: 6px;
+    }
+    .subtitle {
+      text-align: center; font-size: 12.5px; line-height: 1.55;
+      color: rgba(255,255,255,0.92); max-width: 380px; margin: 0 auto 18px;
+      white-space: pre-line;
+    }
+    .subtitle strong { color: var(--white); font-weight: 700; }
+    #siteBadgeWrap { display: none; margin-bottom: 18px; }
     #siteBadge {
       display: inline-block;
-      background: var(--red-d); border: 1px solid var(--red-m);
-      border-radius: 100px; padding: 4px 12px;
-      font-family: var(--mono); font-size: 11px; font-weight: 600;
-      color: var(--red); letter-spacing: 0.3px;
+      background: rgba(0,0,0,0.24); border: 1px solid rgba(255,255,255,0.28);
+      border-radius: 999px; padding: 4px 13px;
+      font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--white);
     }
 
-    /* ── Quote ── */
-    .quote-wrap {
-      background: var(--s1); border: 1px solid var(--b1);
-      border-radius: 14px; padding: 18px 20px;
-      margin-bottom: 24px; text-align: left;
+    /* ── The action ribbon: flat, wide, connected segments, round outer corners ──
+       One continuous white bar. Segments butt against each other and are split
+       by hairlines, so it reads as a single ribbon rather than three buttons.   */
+    .ribbon {
+      display: flex; width: 100%; margin-bottom: 20px;
+      background: var(--face); border-radius: 999px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.26);
+      overflow: hidden;
     }
-    .quote-eyebrow {
-      font-family: var(--mono); font-size: 9px; font-weight: 600;
-      letter-spacing: 1.3px; text-transform: uppercase;
-      color: var(--muted); margin-bottom: 8px;
-    }
-    .quote-text { font-size: 13px; color: var(--text2); line-height: 1.7; font-style: italic; }
-
-    /* ── Actions ── */
-    .actions { display: flex; flex-direction: column; gap: 9px; margin-bottom: 24px; }
-    .btn {
+    .ribbon-btn {
+      flex: 1 1 0; min-width: 0;
       display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-      font-family: var(--sans); font-size: 13px; font-weight: 600;
-      padding: 12px 22px; border-radius: 10px; cursor: pointer;
-      text-decoration: none; border: none; transition: all 0.15s ease;
+      padding: 15px 12px; border: none; background: transparent;
+      font-family: var(--sans); font-size: 12.5px; font-weight: 700;
+      color: var(--face-ink); cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .btn:active { transform: scale(0.97); }
-    .btn-primary { background: #fff; color: #000; }
-    .btn-primary:hover { background: #e8e8e8; }
-    .btn-solved {
-      background: rgba(255,255,255,0.05); color: var(--text);
-      border: 1px solid rgba(255,255,255,0.15); font-weight: 500;
+    .ribbon-btn + .ribbon-btn { box-shadow: inset 1px 0 0 rgba(200,25,28,0.20); }
+    .ribbon-btn:hover:not(:disabled) { background: rgba(200,25,28,0.10); color: var(--red); }
+    .ribbon-btn:active:not(:disabled) { background: rgba(200,25,28,0.18); }
+    .ribbon-btn:focus-visible { outline: 3px solid var(--face-ink); outline-offset: -3px; }
+    /* The earned segment: solid red once the clock hits zero. */
+    .ribbon-btn.reward:not(:disabled) { background: var(--red); color: var(--white); }
+    .ribbon-btn.reward:not(:disabled):hover { background: var(--red-lit); color: var(--white); }
+    .ribbon-btn:disabled {
+      color: var(--face-sub); opacity: 0.55; cursor: not-allowed;
+      background: rgba(128,128,128,0.10);
     }
-    .btn-solved:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); }
+    .ribbon-btn svg { flex-shrink: 0; }
 
+    /* ── Success message ── */
     .success-msg {
-      display: none;
-      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 12px; padding: 18px 22px;
-      text-align: center; margin-bottom: 24px;
+      display: none; width: 100%;
+      background: var(--face); color: var(--face-ink);
+      border-radius: 16px; padding: 16px 18px; text-align: center; margin-bottom: 18px;
+      box-shadow: 0 14px 36px rgba(0,0,0,0.22);
     }
-    .success-msg-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 5px; letter-spacing: -0.3px; }
-    .success-msg-sub { font-size: 12px; color: var(--text2); font-family: var(--mono); }
-
-    .footer-note {
-      text-align: center; font-family: var(--mono);
-      font-size: 10px; color: var(--muted);
+    .success-msg-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+    .success-msg-sub { font-size: 11px; color: var(--red); font-family: var(--mono); }
+    /* ── Narrow screens: the ribbon stacks but stays connected ── */
+    @media (max-width: 440px) {
+      :root { --clock: 216px; }
+      .clock-time { font-size: 50px; }
+      .four-oh-four { font-size: 27px; letter-spacing: 2px; }
+      .ribbon { flex-direction: column; border-radius: 26px; }
+      .ribbon-btn + .ribbon-btn { box-shadow: inset 0 1px 0 rgba(200,25,28,0.20); }
     }
   </style>
 </head>
 <body>
+
+  <!-- Animated background (decorative) -->
+  <div class="bg" aria-hidden="true">
+    <div class="bg-wash"></div>
+    <div class="bg-blob a"></div>
+    <div class="bg-blob b"></div>
+    <div class="bg-stripes"></div>
+    <div class="bg-grain"></div>
+  </div>
+
   <div class="container">
 
-    <div class="topbar">
+    <!-- Left: identity, clock, headline, actions -->
+    <div class="col col-main">
+
+    <div class="top-row">
       <div class="brand">
         <div class="brand-logo">CF</div>
-        <span class="brand-name">CF Focus</span>
+        <span class="brand-name">CF FOCUS</span>
+      </div>
+      <div id="sessionCard">
+        <span class="session-dot"></span>
+        <span class="session-pill">Session</span>
+        <span class="session-timer-big" id="sessionTimerBig">--:--</span>
+        <span class="hc-badge" id="hcBadge">Hardcore</span>
       </div>
     </div>
 
-    <!-- Session timer card -->
-    <div id="sessionCard">
-      <div class="session-card-left">
-        <div class="session-pill">
-          <div class="session-dot"></div>
-          Focus Session
-        </div>
-        <div class="session-card-sub">remaining in session</div>
-        <div class="hc-badge" id="hcBadge">Hardcore &mdash; stay strong</div>
-      </div>
-      <div class="session-timer-big" id="sessionTimerBig">--:--</div>
-    </div>
-
-    <!-- Stop icon + headline -->
-    <div class="stop-icon" id="stopIcon">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.6"/>
-        <rect x="8.5" y="8.5" width="7" height="7" rx="1" fill="currentColor" opacity="0.85"/>
+    <!-- The clock -->
+    <div class="clock-wrap">
+      <svg class="clock-ring" viewBox="0 0 302 302">
+        <circle class="track" cx="151" cy="151" r="147" fill="none" stroke-width="7"/>
+        <circle class="arc" id="clockArc" cx="151" cy="151" r="147" fill="none" stroke-width="7"
+          stroke-linecap="round" stroke-dasharray="923.63" stroke-dashoffset="923.63"/>
       </svg>
+      <div class="clock-face" id="clockFace">
+        <div class="clock-eyebrow" id="clockEyebrow">Locked for</div>
+        <div class="clock-time" id="clockTime">--:--</div>
+        <div class="clock-cap" id="clockCap">open a practice tab to start the clock</div>
+      </div>
     </div>
 
-    <h1 id="mainHeadline">Solve it <span class="headline-accent">yourself.</span></h1>
-
-    <p class="subtitle" id="subText">
-      You're about to use AI.<br>Try harder first &mdash; that struggle is where growth lives.
-    </p>
-
+    <!-- Headline -->
+    <div class="four-oh-four">404 NOT FOUND</div>
+    <div class="go-work">Go and work</div>
+    <p class="subtitle" id="subText">This page is gone until you&rsquo;ve done the thinking.</p>
     <div id="siteBadgeWrap"><span id="siteBadge"></span></div>
 
-    <!-- ═══════ HINT TIMELINE ═══════ -->
-    <div class="hint-timeline" id="hintTimeline">
-      <div class="hint-timeline-header">
-        <span class="hint-timeline-title">Progressive Unlock</span>
-        <span class="hint-elapsed" id="hintElapsedText">0m focused</span>
-      </div>
-      <div class="hint-track">
-        <div class="hint-track-fill t0" id="hintTrackFill" style="width:0%"></div>
-      </div>
-      <div class="hint-steps" id="hintSteps">
-        <div class="hint-step active t0" data-tier="0">
-          <div class="hint-step-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
-              <path d="M6.5 6.5l11 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-            </svg>
-          </div>
-          <div class="hint-step-label">Blocked</div>
-          <div class="hint-step-time" id="tierTime0">&lt;15m</div>
-        </div>
-        <div class="hint-step" data-tier="1">
-          <div class="hint-step-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none">
-              <path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.5.4.8 1 .8 1.6V16h5.4v-.5c0-.6.3-1.2.8-1.6A6 6 0 0 0 12 3z"
-                stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
-          <div class="hint-step-label">Hint 1</div>
-          <div class="hint-step-time" id="tierTime1">15m</div>
-        </div>
-        <div class="hint-step" data-tier="2">
-          <div class="hint-step-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none">
-              <circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.8"/>
-              <path d="M15.8 15.8L20 20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-            </svg>
-          </div>
-          <div class="hint-step-label">Hint 2</div>
-          <div class="hint-step-time" id="tierTime2">25m</div>
-        </div>
-        <div class="hint-step" data-tier="3">
-          <div class="hint-step-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none">
-              <rect x="4" y="11" width="16" height="10" rx="2.5" stroke="currentColor" stroke-width="1.8"/>
-              <path d="M8 11V7.5a4 4 0 0 1 8 0V11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-              <circle cx="12" cy="16" r="1.4" fill="currentColor"/>
-            </svg>
-          </div>
-          <div class="hint-step-label">Unlock</div>
-          <div class="hint-step-time" id="tierTime3">35m</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Tier 1 card: general approach hint -->
-    <div class="tier-card t1" id="tierCard1">
-      <div class="tier-card-header">
-        <span class="tier-card-badge t1">Hint 1</span>
-        <span class="tier-card-title">Think about the approach</span>
-      </div>
-      <div class="tier-card-body">
-        <strong>Questions to guide you:</strong><br>
-        &bull; What data structure fits this problem? (array, stack, map, tree, graph?)<br>
-        &bull; Have you seen a similar pattern before? (two pointers, sliding window, binary search?)<br>
-        &bull; What's the brute force? Can you optimize from there?<br>
-        &bull; Try writing pseudocode before real code.
-      </div>
-    </div>
-
-    <!-- Tier 2 card: deeper algorithmic hint -->
-    <div class="tier-card t2" id="tierCard2">
-      <div class="tier-card-header">
-        <span class="tier-card-badge t2">Hint 2</span>
-        <span class="tier-card-title">Narrow down the technique</span>
-      </div>
-      <div class="tier-card-body">
-        <strong>Dig deeper:</strong><br>
-        &bull; If the answer is monotonic, consider <strong>binary search on the answer</strong>.<br>
-        &bull; If you need range queries, think <strong>prefix sums or segment tree</strong>.<br>
-        &bull; If there are dependencies, think <strong>topological sort or DP</strong>.<br>
-        &bull; If constraints are small (N &le; 20), try <strong>bitmask/backtracking</strong>.<br>
-        &bull; Read the constraints carefully &mdash; they hint at the expected complexity.
-      </div>
-    </div>
-
-    <!-- Tier 3 card: earned AI access -->
-    <div class="tier-card t3" id="tierCard3">
-      <div class="tier-card-header">
-        <span class="tier-card-badge t3">Earned Access</span>
-        <span class="tier-card-title">You've put in the work</span>
-      </div>
-      <div class="tier-card-body">
-        You've struggled with this problem for a meaningful amount of time.
-        That effort is real learning. You've <strong>earned</strong> the right to use AI as a tool &mdash; not a crutch.<br><br>
-        Use it wisely: ask for <em>concepts</em>, not <em>solutions</em>.
-      </div>
-      <button class="btn-unlock-ai" id="unlockAiBtn">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-          <rect x="3" y="11" width="18" height="12" rx="3" stroke="currentColor" stroke-width="2"/>
-          <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-        <span id="unlockAiBtnLabel">Unlock AI for 10 minutes</span>
-      </button>
-    </div>
-
-    <!-- Quote -->
-    <div class="quote-wrap" id="quoteWrap">
-      <div class="quote-eyebrow">Reminder</div>
-      <p class="quote-text" id="quote"></p>
-    </div>
-
-    <!-- Actions -->
-    <div class="actions" id="actions">
-      <button class="btn btn-primary" id="goBackBtn">
+    <!-- Connected action ribbon -->
+    <div class="ribbon" id="actions">
+      <button class="ribbon-btn" id="goBackBtn">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-          <path d="M10 12.5L5.5 8 10 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M10 12.5L5.5 8 10 3.5" stroke="currentColor" stroke-width="1.8"
+            stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        Go back to problem
+        Back to problem
       </button>
-      <button class="btn btn-solved" id="solvedBtn">
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-          <path d="M2.5 8.5l3.5 3.5 7-8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      <button class="ribbon-btn" id="solvedBtn">I solved it</button>
+      <button class="ribbon-btn reward" id="unlockAiBtn" disabled>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="11" width="18" height="11" rx="3" stroke="currentColor" stroke-width="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>
-        I solved it &mdash; unlock AI briefly
+        <span id="unlockAiBtnLabel">Unlock AI</span>
       </button>
     </div>
 
@@ -473,9 +389,7 @@
       <div class="success-msg-sub" id="successSub">Redirecting&hellip;</div>
     </div>
 
-    <p class="footer-note" id="footerNote">
-      CF Focus is active while a practice tab is open
-    </p>
+    </div><!-- /col-main -->
 
   </div>
 

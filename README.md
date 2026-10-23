@@ -10,7 +10,7 @@
 
 CF Focus **automatically blocks AI chatbots** (ChatGPT, Claude, Gemini, Copilot, and more) the moment you open a competitive programming platform such as Codeforces or LeetCode. Close the platform tab and AI sites become accessible again — no manual toggling required.
 
-It also provides **Focus Sessions** (timed deep-work blocks, with an optional Hardcore mode that cannot be paused), a **Progressive Hint Unlock** system that rewards genuine effort, and tracks your **daily streak, focus minutes, blocks avoided, and problems solved**.
+It also provides a **count-up focus clock** that runs for as long as a practice tab is open, a **Progressive Hint Unlock** system that rewards genuine effort, and tracks your **daily streak, focus minutes, blocks avoided, and problems solved** — including a year-long lock-in calendar.
 
 ---
 
@@ -43,11 +43,10 @@ The longer you stay focused on a problem without snoozing or solving, the more h
 
 All thresholds are configurable in **Settings → Hints**. The timer resets when you snooze, solve a problem, or close all focus tabs.
 
-### Focus Sessions
-Start a timed deep-work block from the popup (15 / 25 / 45 / 60 / 90 min). Blocking stays on for the entire duration regardless of which tabs are open.
+### Focus Clock
+The popup shows a single count-up clock with a flame that burns brighter the longer you go. It starts the moment your first practice tab opens and resets when the last one closes — snoozing does not reset it. The ring fills toward your daily goal.
 
-- **Standard** — you can end the session early.
-- **Hardcore** — no snooze, no end, no exit. Disables the hint unlock too. Use sparingly.
+**Start Focus Tab** opens (or jumps to) a practice tab, which is what starts the clock.
 
 ### Custom Blocklist
 - Toggle individual AI sites on/off
@@ -58,7 +57,6 @@ Start a timed deep-work block from the popup (15 / 25 / 45 / 60 / 90 min). Block
 - Pause blocking temporarily (5m / 15m / 30m / 1h / 2h)
 - Keyboard shortcut: `Ctrl+Shift+B` (Mac: `⌘⇧B`)
 - Auto-resumes when the snooze expires
-- Disabled during Hardcore sessions
 
 ### Scheduled Blocking
 - Block AI during fixed hours regardless of open tabs
@@ -73,12 +71,16 @@ Start a timed deep-work block from the popup (15 / 25 / 45 / 60 / 90 min). Block
 - **Today**: minutes focused, AI blocks avoided, problems solved.
 - **All-time**: total sessions, total focus hours, blocks avoided, problems solved.
 - **Streak**: current and longest streak of consecutive focused days.
+- **Lock-In Calendar**: a GitHub-style year grid of every day you kept the blocker on, with a per-month roll-up of days locked in.
 - Vertical bar chart and "resistance rate" donut in the Overview page.
 
 ### PIN Lock
 - Set a 4–8 digit PIN to gate the Settings page
 - PIN stored as SHA-256 hash, never plain text
 - Useful for protecting against impulsive self-disabling
+
+### Light & Dark Themes
+Every surface — popup, settings and the block page — supports light and dark. Pick **Light / Dark / Auto** from the popup's theme button or **Settings → Appearance**; Auto follows your OS. The choice syncs across devices.
 
 ### Settings Sync
 Settings sync across your Chrome devices via `chrome.storage.sync`. Stats stay per-device.
@@ -112,8 +114,8 @@ ChatGPT · OpenAI Chat · Claude · Gemini · Copilot · Bing Chat · Perplexity
 - Click the extension icon → **Snooze Xm**
 - Or press `Ctrl+Shift+B` / `⌘⇧B`
 
-**To start a Focus Session:**
-- Click the extension icon → pick a duration → optionally toggle Hardcore → **Start Focus Session**
+**To start focusing:**
+- Click the extension icon → **Start Focus Tab**. The clock starts and keeps counting until every practice tab is closed.
 
 **To change settings:**
 - Click the **⚙** icon in the popup → opens the full settings page

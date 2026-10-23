@@ -10,6 +10,15 @@ const PLATFORMS = {
   cses:       { name: 'CSES',        domains: ['cses.fi'] },
 };
 
+const PLATFORM_URLS = {
+  codeforces: 'https://codeforces.com',
+  leetcode:   'https://leetcode.com',
+  atcoder:    'https://atcoder.jp',
+  hackerrank: 'https://hackerrank.com',
+  codechef:   'https://codechef.com',
+  cses:       'https://cses.fi',
+};
+
 const DEFAULT_BLOCKED = [
   { id: 'chatgpt',    domain: 'chatgpt.com',            name: 'ChatGPT' },
   { id: 'openai',     domain: 'chat.openai.com',        name: 'OpenAI Chat' },
@@ -44,13 +53,14 @@ function getSettings() {
     snoozeDuration: 15,
     schedule: { enabled: false, days: [1, 2, 3, 4, 5], startHour: 9, endHour: 21 },
     pin: null,
+    theme: 'system',       // 'light' | 'dark' | 'system'
     dailyGoal: 120,        // minutes
     breakReminder: 50,     // minutes, 0 = disabled
-    // Progressive Hint Unlock (minutes spent stuck on a problem)
+    // Earned AI unlock (minutes of work before AI can be unlocked).
+    // Key name kept as `hintTiers` only because it is already persisted in
+    // users' synced settings — renaming it would silently reset their config.
     hintTiers: {
-      hint1At: 15,       // Hint 1 unlocks after this many minutes
-      hint2At: 25,       // Hint 2 unlocks
-      unlockAt: 35,      // AI unlock button becomes available
+      unlockAt: 35,      // AI unlock button becomes available after this long
       unlockMinutes: 10, // how long the AI unlock lasts
     },
   }, resolve));
@@ -69,23 +79,55 @@ function getLocalState() {
     focusSession: null,
     aiBlocksAvoided: 0,
     problemsSolved: 0,
-    // Hint timer — paused when snoozed/scheduled-off, reset when focus tabs close.
+    // Unlock timer — paused when snoozed/scheduled-off, reset when focus tabs close.
     problemStartTime: null,   // effective start (already shifted forward for paused intervals)
     problemPausedAt: null,    // timestamp when timer was paused, null if running
+    // The popup's count-up clock. Tied purely to "is a practice tab open" —
+    // it keeps running through a snooze and resets only when the last
+    // competitive-programming tab is closed.
+    focusClockStart: null,
     // Daily tracking
     todayDate: null,
     todayMinutes: 0,
     todayBlocks: 0,
     todaySolved: 0,
     todaySessions: 0,
+    // Per-day history for the lock-in calendar: { 'YYYY-MM-DD': {m, b, s, n} }
+    dayLog: {},
   }, resolve));
 }
 
-// ─── Hint-timer state machine ─────────────────────────────────────────────────
-// The hint timer runs while:
+// ─── Lock-in calendar ─────────────────────────────────────────────────────────
+// One compact entry per day: m=minutes, b=AI blocks resisted, s=problems solved,
+// n=stat sessions. Kept for ~400 days so the year grid always has a full window.
+const DAY_LOG_KEEP_DAYS = 400;
+
+function pruneDayLog(dayLog) {
+  const cutoff = new Date(Date.now() - DAY_LOG_KEEP_DAYS * 86400000)
+    .toISOString().slice(0, 10);
+  const out = {};
+  for (const [date, entry] of Object.entries(dayLog || {})) {
+    if (date >= cutoff) out[date] = entry;
+  }
+  return out;
+}
+
+// Archive a finished day. The live "today" counters stay the source of truth
+// until midnight, so clients overlay them on top of the log for today's cell —
+// that keeps this a single write per day and makes double-counting impossible.
+function archiveDay(dayLog, date, entry) {
+  const log = pruneDayLog(dayLog);
+  if (!date) return log;
+  const m = entry.m || 0, b = entry.b || 0, s = entry.s || 0, n = entry.n || 0;
+  if (m || b || s || n) log[date] = { m, b, s, n };
+  return log;
+}
+
+// ─── Unlock-timer state machine ───────────────────────────────────────────────
+// The unlock timer runs while:
 //   • the user has a focus tab open
 //   • blocking is currently active (not snoozed off, not scheduled off)
-//   • the focus session is not hardcore (hardcore disables hint unlock entirely)
+//   • the focus session is not hardcore (hardcore disables the unlock entirely)
 // It pauses on snooze (preserving elapsed) and resets only when all focus tabs close.
 function effectiveElapsedMs(local) {
   if (!local.problemStartTime) return 0;
@@ -180,7 +222,15 @@ function makeDNRRule(id, domain, name, path) {
 async function ensureToday(local) {
   const today = todayStr();
   if (local.todayDate !== today) {
-    const reset = { todayDate: today, todayMinutes: 0, todayBlocks: 0, todaySolved: 0, todaySessions: 0 };
+    // Roll the outgoing day into the lock-in calendar before clearing counters.
+    const dayLog = archiveDay(local.dayLog, local.todayDate, {
+      m: local.todayMinutes, b: local.todayBlocks,
+      s: local.todaySolved,  n: local.todaySessions,
+    });
+    const reset = {
+      todayDate: today, todayMinutes: 0, todayBlocks: 0, todaySolved: 0, todaySessions: 0,
+      dayLog,
+    };
     await chrome.storage.local.set(reset);
     return { ...local, ...reset };
   }
@@ -225,10 +275,10 @@ async function syncBlockingState() {
   const isHardcoreSession = isFocusSession && local.focusSession.hardcore;
   const block = !isSnoozed && (hasFocusTabs || isScheduleActive || isFocusSession);
 
-  // \u2500\u2500\u2500 Hint-timer state machine \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  // \u2500\u2500\u2500 Unlock-timer state machine \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   // Run when the user has focus tabs open AND blocking is currently in effect
-  // AND we aren't in a hardcore session (which disables hints).
-  const shouldRunHintTimer = hasFocusTabs && block && !isHardcoreSession;
+  // AND we aren't in a hardcore session (which disables the unlock).
+  const shouldRunUnlockTimer = hasFocusTabs && block && !isHardcoreSession;
   const timerPatch = {};
   if (!hasFocusTabs) {
     // No focus tab \u2014 reset the cycle entirely.
@@ -236,7 +286,7 @@ async function syncBlockingState() {
       timerPatch.problemStartTime = null;
       timerPatch.problemPausedAt  = null;
     }
-  } else if (shouldRunHintTimer) {
+  } else if (shouldRunUnlockTimer) {
     if (local.problemPausedAt) {
       // Resume \u2014 shift start forward by the paused duration.
       timerPatch.problemStartTime = local.problemStartTime + (now - local.problemPausedAt);
@@ -246,11 +296,21 @@ async function syncBlockingState() {
       timerPatch.problemStartTime = now;
       timerPatch.problemPausedAt  = null;
     }
-  } else if (hasFocusTabs && !shouldRunHintTimer) {
+  } else if (hasFocusTabs && !shouldRunUnlockTimer) {
     // Pause (snoozed, scheduled off, or hardcore on).
     if (local.problemStartTime && !local.problemPausedAt) {
       timerPatch.problemPausedAt = now;
     }
+  }
+
+  // \u2500\u2500\u2500 Count-up focus clock \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  // Starts the moment a practice tab appears and resets the moment the last one
+  // closes. Deliberately independent of `block` so snoozing doesn't wipe it.
+  const clockPatch = {};
+  if (hasFocusTabs && !local.focusClockStart) {
+    clockPatch.focusClockStart = now;
+  } else if (!hasFocusTabs && local.focusClockStart) {
+    clockPatch.focusClockStart = null;
   }
 
   // \u2500\u2500\u2500 Focus session pause-during-snooze \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
@@ -308,6 +368,7 @@ async function syncBlockingState() {
     blocking: block,
     tabCount: focusTabs.length,
     ...timerPatch,
+    ...clockPatch,
     ...sessionPatch,
   });
 }
@@ -315,7 +376,7 @@ async function syncBlockingState() {
 // ─── Session stats ────────────────────────────────────────────────────────────
 
 async function startSession() {
-  // Only tracks stat-session start; the hint timer is managed separately.
+  // Only tracks stat-session start; the unlock timer is managed separately.
   await chrome.storage.local.set({ sessionStart: Date.now() });
 }
 
@@ -470,8 +531,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           return;
         }
 
-        case 'HINT_UNLOCK': {
-          // Tier 3 earned unlock — only honored if the user has actually reached the unlock threshold.
+        case 'EARN_UNLOCK': {
+          // Earned unlock — only honored once the user has actually put in the time.
           const [hSettings, hl] = await Promise.all([getSettings(), getLocalState()]);
           if (hl.focusSession && hl.focusSession.hardcore) {
             sendResponse({ ok: false, reason: 'hardcore' });
@@ -487,9 +548,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           const unlockUntil = Date.now() + unlockMin * 60000;
           await chrome.storage.sync.set({ snoozeUntil: unlockUntil });
           await chrome.alarms.create('snooze-end', { delayInMinutes: unlockMin });
-          // NOTE: we deliberately do NOT reset problemStartTime — the user earned
-          // tier 3 status; after the snooze ends they stay at tier 3 and can
-          // unlock again, until they close the focus tab.
+          // NOTE: we deliberately do NOT reset problemStartTime — the user has
+          // earned the unlock; after the snooze ends it stays earned until they
+          // close the focus tab.
           await syncBlockingState();
           // After rules are cleared, redirect the requesting tab to the AI site.
           // Doing it server-side avoids any race between client navigation and DNR rule update.
@@ -502,8 +563,33 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           return;
         }
 
-        case 'RESET_HINT_TIMER': {
-          // User manually restarts the hint cycle (e.g. switched to a new problem)
+        case 'OPEN_FOCUS_TAB': {
+          // Focus an already-open practice tab if there is one, otherwise open
+          // the first enabled platform. Opening the tab is what starts the
+          // count-up clock — syncBlockingState picks it up from the tab event.
+          const oSettings = await getSettings();
+          const allTabs = await chrome.tabs.query({});
+          const existing = allTabs.find(t => isFocusTab(t, oSettings));
+          if (existing) {
+            try {
+              await chrome.tabs.update(existing.id, { active: true });
+              await chrome.windows.update(existing.windowId, { focused: true });
+            } catch (_) {}
+            sendResponse({ ok: true, focused: true });
+            return;
+          }
+          const first = oSettings.enabledPlatforms[0] || 'codeforces';
+          const url = PLATFORM_URLS[first] ||
+            (oSettings.customPlatforms && oSettings.customPlatforms[0]
+              ? `https://${oSettings.customPlatforms[0].domain}`
+              : PLATFORM_URLS.codeforces);
+          await chrome.tabs.create({ url });
+          sendResponse({ ok: true, opened: url });
+          return;
+        }
+
+        case 'RESET_UNLOCK_TIMER': {
+          // User manually restarts the cycle (e.g. switched to a new problem)
           await chrome.storage.local.set({ problemStartTime: Date.now() });
           sendResponse({ ok: true });
           return;
@@ -528,21 +614,18 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             liveTodayMinutes += Math.round((Date.now() - local.sessionStart) / 60000);
           }
 
-          // Compute hint tier — disabled during hardcore sessions
-          const tiers = settings.hintTiers || { hint1At: 15, hint2At: 25, unlockAt: 35, unlockMinutes: 10 };
-          let hintTier = 0; // 0=full block, 1=hint1, 2=hint2, 3=unlockable
-          const hardcoreActive = local.focusSession && local.focusSession.hardcore && now < local.focusSession.endTime;
+          // Has the AI unlock been earned? Never, during a hardcore session.
+          const tiers = settings.hintTiers || { unlockAt: 35, unlockMinutes: 10 };
+          const nowTs = Date.now();
+          const hardcoreActive = !!(local.focusSession && local.focusSession.hardcore &&
+            (local.focusSession.pausedRemainingMs > 0 || nowTs < local.focusSession.endTime));
           const elapsedMs = hardcoreActive ? 0 : effectiveElapsedMs(local);
-          const hintElapsed = Math.floor(elapsedMs / 60000);
-          if (!hardcoreActive) {
-            if (hintElapsed >= tiers.unlockAt)      hintTier = 3;
-            else if (hintElapsed >= tiers.hint2At)  hintTier = 2;
-            else if (hintElapsed >= tiers.hint1At)  hintTier = 1;
-          }
+          const unlockElapsed = Math.floor(elapsedMs / 60000);
+          const unlockEarned = !hardcoreActive && unlockElapsed >= tiers.unlockAt;
 
           sendResponse({
             settings, local, focusTabCount, liveTodayMinutes,
-            hintTier, hintElapsed, hintTiers: tiers,
+            unlockEarned, unlockElapsed, hintTiers: tiers, hardcoreActive,
             // Convenience for clients: send the resolved start + pause so they can
             // tick locally between polls without re-deriving from raw fields.
             problemStartTime: local.problemStartTime,

@@ -33,7 +33,7 @@ const DEFAULT_BLOCKED = [
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-const DEFAULT_HINT_TIERS = { hint1At: 15, hint2At: 25, unlockAt: 35, unlockMinutes: 10 };
+const DEFAULT_UNLOCK = { unlockAt: 35, unlockMinutes: 10 };
 
 const DEFAULTS = {
   enabledPlatforms: ['codeforces', 'leetcode', 'atcoder', 'hackerrank', 'codechef', 'cses'],
@@ -46,7 +46,7 @@ const DEFAULTS = {
   pin: null,
   dailyGoal: 120,
   breakReminder: 50,
-  hintTiers: { ...DEFAULT_HINT_TIERS },
+  hintTiers: { ...DEFAULT_UNLOCK },   // legacy key name, see background.js
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -58,6 +58,13 @@ function getStats() {
   return new Promise(resolve => chrome.storage.local.get({
     totalSessions: 0, totalMinutes: 0, currentStreak: 0, longestStreak: 0,
     aiBlocksAvoided: 0, problemsSolved: 0,
+  }, resolve));
+}
+function getDayLog() {
+  return new Promise(resolve => chrome.storage.local.get({
+    dayLog: {},
+    // Today isn't archived until midnight, so overlay the live counters on it.
+    todayDate: null, todayMinutes: 0, todayBlocks: 0, todaySolved: 0, todaySessions: 0,
   }, resolve));
 }
 function saveSettings(partial) {
@@ -150,7 +157,8 @@ function showPage() {
 // ─── Render ───────────────────────────────────────────────────────────────────
 
 async function loadAll() {
-  const [settings, stats] = await Promise.all([getSettings(), getStats()]);
+  const [settings, stats, log] = await Promise.all([getSettings(), getStats(), getDayLog()]);
+  renderCalendar(log, settings, stats);
   renderPlatforms(settings);
   renderDefaultSites(settings);
   renderCustomList(settings.customBlocklist);
@@ -158,24 +166,20 @@ async function loadAll() {
   renderDailyGoal(settings);
   renderBreakReminder(settings);
   renderSchedule(settings);
-  renderHintTiers(settings);
+  renderUnlockRule(settings);
   renderPin(settings);
   renderStats(stats);
 }
 
-function renderHintTiers(settings) {
-  const tiers = { ...DEFAULT_HINT_TIERS, ...(settings.hintTiers || {}) };
-  const h1  = document.getElementById('hint1AtInput');
-  const h2  = document.getElementById('hint2AtInput');
+function renderUnlockRule(settings) {
+  const rule = { ...DEFAULT_UNLOCK, ...(settings.hintTiers || {}) };
   const un  = document.getElementById('unlockAtInput');
   const dur = document.getElementById('unlockMinutesInput');
-  const msg = document.getElementById('hintTierMsg');
-  if (!h1) return;
+  const msg = document.getElementById('unlockMsg');
+  if (!un) return;
 
-  h1.value  = tiers.hint1At;
-  h2.value  = tiers.hint2At;
-  un.value  = tiers.unlockAt;
-  dur.value = tiers.unlockMinutes;
+  un.value  = rule.unlockAt;
+  dur.value = rule.unlockMinutes;
 
   function clamp(input, min, max) {
     const v = Math.round(Number(input.value));
@@ -184,41 +188,32 @@ function renderHintTiers(settings) {
   }
 
   async function save() {
-    const v1  = clamp(h1, 1, 240);
-    const v2  = clamp(h2, 1, 240);
-    const v3  = clamp(un, 1, 240);
-    const vd  = clamp(dur, 1, 60);
-    msg.className = 'hint-tier-msg';
+    const at = clamp(un, 1, 240);
+    const md = clamp(dur, 1, 60);
+    msg.className = 'unlock-msg';
     msg.textContent = '';
-    if (v1 === null || v2 === null || v3 === null || vd === null) {
-      msg.textContent = 'All values must be whole numbers.';
-      msg.className = 'hint-tier-msg err';
+    if (at === null || md === null) {
+      msg.textContent = 'Both values must be whole numbers.';
+      msg.className = 'unlock-msg err';
       return;
     }
-    if (!(v1 < v2 && v2 < v3)) {
-      msg.textContent = 'Hint 1 < Hint 2 < Unlock — please order thresholds correctly.';
-      msg.className = 'hint-tier-msg err';
-      return;
-    }
-    h1.value = v1; h2.value = v2; un.value = v3; dur.value = vd;
-    await saveSettings({ hintTiers: { hint1At: v1, hint2At: v2, unlockAt: v3, unlockMinutes: vd } });
-    msg.textContent = `Saved: hint 1 at ${v1}m · hint 2 at ${v2}m · unlock at ${v3}m (${vd}m unlock).`;
-    msg.className = 'hint-tier-msg ok';
+    un.value = at; dur.value = md;
+    await saveSettings({ hintTiers: { unlockAt: at, unlockMinutes: md } });
+    msg.textContent = `Saved: AI unlocks after ${at}m of focus, for ${md}m.`;
+    msg.className = 'unlock-msg ok';
     flashSaved();
   }
 
-  [h1, h2, un, dur].forEach(inp => {
+  [un, dur].forEach(inp => {
     inp.onchange = save;
     inp.onkeydown = e => { if (e.key === 'Enter') save(); };
   });
 
-  const resetBtn = document.getElementById('resetHintTiersBtn');
+  const resetBtn = document.getElementById('resetUnlockBtn');
   if (resetBtn) {
     resetBtn.onclick = async () => {
-      h1.value  = DEFAULT_HINT_TIERS.hint1At;
-      h2.value  = DEFAULT_HINT_TIERS.hint2At;
-      un.value  = DEFAULT_HINT_TIERS.unlockAt;
-      dur.value = DEFAULT_HINT_TIERS.unlockMinutes;
+      un.value  = DEFAULT_UNLOCK.unlockAt;
+      dur.value = DEFAULT_UNLOCK.unlockMinutes;
       await save();
     };
   }
@@ -702,14 +697,120 @@ function renderPin(settings) {
   }
 }
 
+// ─── Lock-in calendar ─────────────────────────────────────────────────────────
+// A GitHub-style year grid: one cell per day, shaded by how long the blocker
+// was actually working that day. background.js archives each finished day into
+// `dayLog`; today isn't archived until midnight, so it comes from the live
+// today* counters instead — that's why nothing here double-counts.
+
+const CAL_WEEKS  = 53;
+const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// background.js keys days with toISOString().slice(0,10) — i.e. UTC. Match that
+// exactly, or cells drift by a day for anyone far from UTC.
+function utcKey(d) { return d.toISOString().slice(0, 10); }
+
+function calLevel(minutes, goal) {
+  if (!minutes) return 0;
+  const g = goal || 120;
+  if (minutes >= g)        return 4;
+  if (minutes >= g * 0.5)  return 3;
+  if (minutes >= g * 0.25) return 2;
+  return 1;
+}
+
+function describeDay(key, entry) {
+  if (!entry || !(entry.m || entry.b || entry.s)) return `${key} — no focus time`;
+  const parts = [];
+  if (entry.m) parts.push(`${entry.m}m focused`);
+  if (entry.b) parts.push(`${entry.b} AI blocked`);
+  if (entry.s) parts.push(`${entry.s} self-solved`);
+  return `${key} — ${parts.join(' · ')}`;
+}
+
+function renderCalendar(log, settings, stats) {
+  const grid = document.getElementById('calGrid');
+  if (!grid) return;
+  const monthsEl  = document.getElementById('calMonths');
+  const subEl     = document.getElementById('calSub');
+  const goal      = settings.dailyGoal || 120;
+
+  const todayKey = utcKey(new Date());
+
+  // Archived days, with today overlaid from the live counters.
+  const days = { ...(log.dayLog || {}) };
+  if (log.todayMinutes || log.todayBlocks || log.todaySolved) {
+    days[log.todayDate || todayKey] = {
+      m: log.todayMinutes || 0, b: log.todayBlocks  || 0,
+      s: log.todaySolved  || 0, n: log.todaySessions || 0,
+    };
+  }
+
+  // Window: whole weeks, ending with the week that contains today.
+  const end = new Date(todayKey + 'T00:00:00Z');
+  end.setUTCDate(end.getUTCDate() + (6 - end.getUTCDay()));
+  const start = new Date(end);
+  start.setUTCDate(start.getUTCDate() - (CAL_WEEKS * 7 - 1));
+
+  grid.textContent = '';
+  monthsEl.textContent = '';
+
+  const LABEL_SPAN = 3;
+  // The window opens mid-month, so seed with that month: labelling the partial
+  // first column would crowd out the real label for the month that follows it.
+  let lastLabelMonth = start.getUTCMonth();
+  let lastLabelWeek  = -Infinity;
+  const cursor = new Date(start);
+  for (let week = 0; week < CAL_WEEKS; week++) {
+    // Label a column when a new month begins in it. Labels are explicitly
+    // placed, so two that overlap would push the whole row down — skip any
+    // that can't clear the previous one's span.
+    const colMonth = cursor.getUTCMonth();
+    if (colMonth !== lastLabelMonth && week < CAL_WEEKS - 1 &&
+        week - lastLabelWeek >= LABEL_SPAN) {
+      const label = document.createElement('span');
+      label.textContent = MONTH_ABBR[colMonth];
+      label.style.gridColumn = `${week + 1} / span ${LABEL_SPAN}`;
+      monthsEl.appendChild(label);
+      lastLabelWeek = week;
+    }
+    lastLabelMonth = colMonth;
+    for (let d = 0; d < 7; d++) {
+      const key   = utcKey(cursor);
+      const entry = days[key];
+      const cell  = document.createElement('i');
+      if (key > todayKey) {
+        cell.className = 'cal-cell future';
+      } else {
+        const level = calLevel(entry ? entry.m || 0 : 0, goal);
+        cell.className = `cal-cell l${level}${key === todayKey ? ' today' : ''}`;
+        cell.title = describeDay(key, entry);
+      }
+      grid.appendChild(cell);
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+  }
+
+  // ── Summary line: this month, streak, year total ────────────────────────────
+  const monthPrefix = todayKey.slice(0, 7);
+  let monthDays = 0, yearDays = 0;
+  const yearCutoff = utcKey(start);
+  for (const [key, entry] of Object.entries(days)) {
+    if (!entry || !entry.m) continue;
+    if (key >= yearCutoff) yearDays += 1;
+    if (key.startsWith(monthPrefix)) monthDays += 1;
+  }
+
+  subEl.textContent = yearDays === 0
+    // Nothing recorded yet — say so, rather than showing a wall of empty
+    // squares that reads as a rendering failure.
+    ? 'No focus time recorded yet — open a practice tab and your first square lights up'
+    : `${monthDays} day${monthDays === 1 ? '' : 's'} locked in this month · ` +
+      `${stats.currentStreak || 0} day streak · ${yearDays} days in the last year`;
+}
+
 function renderStats(stats) {
-  document.getElementById('statStreak').textContent   = stats.currentStreak  || 0;
-  document.getElementById('statLongest').textContent  = stats.longestStreak  || 0;
-  document.getElementById('statSessions').textContent = stats.totalSessions  || 0;
   const hours = ((stats.totalMinutes || 0) / 60).toFixed(1);
-  document.getElementById('statHours').textContent    = hours;
-  document.getElementById('statBlocks').textContent   = stats.aiBlocksAvoided || 0;
-  document.getElementById('statSolved').textContent   = stats.problemsSolved  || 0;
 
   // Update vertical bar chart (relative height scale)
   const chartVals = [
@@ -747,6 +848,23 @@ function renderStats(stats) {
 document.addEventListener('DOMContentLoaded', () => {
   checkPin();
 
+  // ─── Appearance switch ───────────────────────────────────────────────────
+  const themeSeg = document.getElementById('themeSeg');
+  function paintThemeSeg() {
+    const pref = window.CFTheme.get();
+    themeSeg.querySelectorAll('[data-theme-pref]').forEach(b => {
+      b.classList.toggle('on', b.dataset.themePref === pref);
+    });
+  }
+  themeSeg.addEventListener('click', e => {
+    const btn = e.target.closest('[data-theme-pref]');
+    if (!btn) return;
+    window.CFTheme.set(btn.dataset.themePref);
+    flashSaved();
+  });
+  window.CFTheme.onChange(paintThemeSeg);
+  paintThemeSeg();
+
   // ─── Sidebar navigation ──────────────────────────────────────────────────
   const navItems = document.querySelectorAll('.nav-item[data-view]');
   const views    = document.querySelectorAll('.view[id^="view-"]');
@@ -772,13 +890,20 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('resetStatsBtn').addEventListener('click', async () => {
-    if (!confirm('Reset all focus stats? This cannot be undone.')) return;
-    await new Promise(r => chrome.storage.local.set({
+    if (!confirm('Reset all focus stats? This clears your lock-in calendar too and cannot be undone.')) return;
+    const cleared = {
       totalSessions: 0, totalMinutes: 0, currentStreak: 0,
       longestStreak: 0, lastSessionDate: null, sessionStart: null,
       aiBlocksAvoided: 0, problemsSolved: 0,
-    }, r));
-    renderStats({ totalSessions: 0, totalMinutes: 0, currentStreak: 0, longestStreak: 0, aiBlocksAvoided: 0, problemsSolved: 0 });
+      // Wipe the day history as well, otherwise the calendar keeps showing
+      // activity the headline numbers say never happened.
+      dayLog: {}, todayMinutes: 0, todayBlocks: 0, todaySolved: 0, todaySessions: 0,
+    };
+    await new Promise(r => chrome.storage.local.set(cleared, r));
+    renderStats(cleared);
+    const settings = await getSettings();
+    renderCalendar({ dayLog: {}, todayDate: null, todayMinutes: 0, todayBlocks: 0, todaySolved: 0, todaySessions: 0 },
+      settings, cleared);
     flashSaved();
   });
 });

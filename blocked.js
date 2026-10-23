@@ -9,40 +9,28 @@ const domain   = params.get('domain');
 if (fromSite) {
   const sub = document.getElementById('subText');
   sub.textContent = '';
-  sub.appendChild(document.createTextNode('You’re about to use '));
   const strong = document.createElement('strong');
   strong.textContent = fromSite;
   sub.appendChild(strong);
-  sub.appendChild(document.createTextNode('.\nTry harder first — that struggle is where growth lives.'));
+  sub.appendChild(document.createTextNode(
+    ' does not exist while you’re practising.\nThe struggle is the part that makes you better.'
+  ));
 
   const badge = document.getElementById('siteBadge');
-  badge.textContent = fromSite + ' is blocked';
+  badge.textContent = fromSite + ' · blocked';
   document.getElementById('siteBadgeWrap').style.display = 'block';
 }
 
-// ─── Random motivational quote ────────────────────────────────────────────────
-const quotes = [
-  '"Every problem you solve without AI is a skill you actually own."',
-  '"Struggling with a problem is the feeling of your brain getting stronger."',
-  '"The only way to get better at DSA is to do DSA."',
-  '"Competitive programmers don’t Google their way through a contest."',
-  '"Hard problems require hard thinking, not easy answers."',
-  '"You opened this to practice. So practice."',
-  '"The discomfort of not knowing is exactly where growth lives."',
-  '"An hour of real struggle > ten minutes of AI output you don’t understand."',
-  '"The rating you want is on the other side of this problem."',
-];
-document.getElementById('quote').textContent =
-  quotes[Math.floor(Math.random() * quotes.length)];
-
 // ─── Local state ──────────────────────────────────────────────────────────────
+// A single threshold: focus for `unlockAt` minutes and the AI unlock becomes
+// available for `unlockMinutes`.
+let unlockRule = { unlockAt: 35, unlockMinutes: 10 };
 let sessionData = null;
-let hintTiers   = { hint1At: 15, hint2At: 25, unlockAt: 35, unlockMinutes: 10 };
 let problemStartTime = null;
 let problemPausedAt  = null;
 let isHardcoreSession = false;
 let timerInterval = null;
-let hintInterval  = null;
+let stateInterval = null;
 let tickInterval  = null;
 
 // ─── "Go back to problem" — find an open focus tab and switch to it ──────────
@@ -99,19 +87,23 @@ document.getElementById('goBackBtn').addEventListener('click', () => {
         });
       } else {
         const firstPlatform = settings.enabledPlatforms[0] || 'codeforces';
-        const urls = {
-          codeforces: 'https://codeforces.com',
-          leetcode:   'https://leetcode.com',
-          atcoder:    'https://atcoder.jp',
-          hackerrank: 'https://hackerrank.com',
-          codechef:   'https://codechef.com',
-          cses:       'https://cses.fi',
-        };
-        window.location.href = urls[firstPlatform] || 'https://codeforces.com';
+        window.location.href = platformUrl(firstPlatform);
       }
     });
   });
 });
+
+function platformUrl(key) {
+  const urls = {
+    codeforces: 'https://codeforces.com',
+    leetcode:   'https://leetcode.com',
+    atcoder:    'https://atcoder.jp',
+    hackerrank: 'https://hackerrank.com',
+    codechef:   'https://codechef.com',
+    cses:       'https://cses.fi',
+  };
+  return urls[key] || 'https://codeforces.com';
+}
 
 // ─── Block counter — dedupe within a single tab/visit ────────────────────────
 // sessionStorage persists across reloads of the same tab, so refreshing this
@@ -140,116 +132,116 @@ function countBlockOnce() {
 }
 countBlockOnce();
 
-// ─── Hint timeline ────────────────────────────────────────────────────────────
-// Tier labels never change, so set them once.
-function updateTierTimeLabels() {
-  const t0 = document.getElementById('tierTime0');
-  const t1 = document.getElementById('tierTime1');
-  const t2 = document.getElementById('tierTime2');
-  const t3 = document.getElementById('tierTime3');
-  if (t0) t0.textContent = `<${hintTiers.hint1At}m`;
-  if (t1) t1.textContent = `${hintTiers.hint1At}m`;
-  if (t2) t2.textContent = `${hintTiers.hint2At}m`;
-  if (t3) t3.textContent = `${hintTiers.unlockAt}m`;
-  const unlockLbl = document.getElementById('unlockAiBtnLabel');
-  if (unlockLbl) unlockLbl.textContent = `Unlock AI for ${hintTiers.unlockMinutes || 10} minutes`;
+// ─── The clock ────────────────────────────────────────────────────────────────
+// One big dial counting down to the moment the AI unlock is earned — or, in a
+// hardcore session, to the end of the session itself.
+const CLOCK_CIRC = 923.63; // 2π × 147, matches the SVG in blocked.html
+
+function paintClock({ eyebrow, time, cap, pct, unlocked }) {
+  const t = document.getElementById('clockTime');
+  const e = document.getElementById('clockEyebrow');
+  const c = document.getElementById('clockCap');
+  const f = document.getElementById('clockFace');
+  const a = document.getElementById('clockArc');
+  if (t) t.textContent = time;
+  if (e) e.textContent = eyebrow;
+  if (c) c.textContent = cap;
+  if (f) f.classList.toggle('unlocked', !!unlocked);
+  if (a) {
+    const p = Math.max(0, Math.min(1, pct));
+    a.style.strokeDashoffset = String(CLOCK_CIRC * (1 - p));
+  }
 }
 
-// Compute tier locally from elapsed milliseconds, so the UI ticks every second
-// without needing a roundtrip to the background.
-function computeTier(elapsedMs) {
-  const m = Math.floor(elapsedMs / 60000);
-  if (m >= hintTiers.unlockAt) return 3;
-  if (m >= hintTiers.hint2At)  return 2;
-  if (m >= hintTiers.hint1At)  return 1;
-  return 0;
+function mmss(ms) {
+  const total = Math.max(0, Math.ceil(ms / 1000));
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-function formatElapsed(elapsedMs) {
-  const totalSec = Math.max(0, Math.floor(elapsedMs / 1000));
-  const m = Math.floor(totalSec / 60);
-  const s = totalSec % 60;
-  return `${m}:${String(s).padStart(2, '0')} focused`;
+function updateUnlockLabel() {
+  const lbl = document.getElementById('unlockAiBtnLabel');
+  if (lbl) lbl.textContent = `Unlock AI · ${unlockRule.unlockMinutes || 10}m`;
 }
 
-function renderHintTick() {
-  if (isHardcoreSession) return;
-  const trackFill = document.getElementById('hintTrackFill');
-  const elapsedEl = document.getElementById('hintElapsedText');
-  const steps     = document.querySelectorAll('#hintSteps .hint-step');
+function renderTick() {
+  const unlockBtn = document.getElementById('unlockAiBtn');
+
+  // Hardcore: the only clock that matters is the session's own countdown.
+  if (isHardcoreSession && sessionData) {
+    const total = Math.max(1, (sessionData.duration || 45) * 60000);
+    const remaining = sessionData.pausedRemainingMs
+      ? sessionData.pausedRemainingMs
+      : Math.max(0, sessionData.endTime - Date.now());
+    paintClock({
+      eyebrow: 'Hardcore lock',
+      time: mmss(remaining),
+      cap: 'no snooze — the session has to run out',
+      pct: 1 - remaining / total,
+      unlocked: false,
+    });
+    if (unlockBtn) unlockBtn.disabled = true;
+    return;
+  }
 
   if (!problemStartTime) {
-    if (elapsedEl) elapsedEl.textContent = 'not yet tracking';
-    if (trackFill) {
-      trackFill.style.width = '0%';
-      trackFill.classList.remove('t0', 't1', 't2', 't3');
-      trackFill.classList.add('t0');
-    }
+    paintClock({
+      eyebrow: 'Locked',
+      time: '--:--',
+      cap: 'open a practice tab to start the clock',
+      pct: 0,
+      unlocked: false,
+    });
+    if (unlockBtn) unlockBtn.disabled = true;
     return;
   }
 
   // Pause-aware elapsed: if the timer is paused, freeze at the paused-at moment.
   const endRef = problemPausedAt || Date.now();
   const elapsedMs = Math.max(0, endRef - problemStartTime);
-  const tier = computeTier(elapsedMs);
+  const targetMs  = Math.max(1, unlockRule.unlockAt) * 60000;
+  const earned    = elapsedMs >= targetMs;
 
-  if (elapsedEl) {
-    elapsedEl.textContent = problemPausedAt
-      ? `${formatElapsed(elapsedMs)} · paused`
-      : formatElapsed(elapsedMs);
+  if (earned) {
+    paintClock({
+      eyebrow: 'Unlocked',
+      time: '00:00',
+      cap: 'you earned it — the ribbon above is live',
+      pct: 1,
+      unlocked: true,
+    });
+  } else {
+    paintClock({
+      eyebrow: problemPausedAt ? 'Paused' : 'Locked for',
+      time: mmss(targetMs - elapsedMs),
+      cap: problemPausedAt ? 'timer paused — blocking is snoozed' : 'until the AI unlock',
+      pct: elapsedMs / targetMs,
+      unlocked: false,
+    });
   }
 
-  // Smooth sub-minute fill — percentage toward the unlockAt threshold
-  const targetMs = Math.max(1, hintTiers.unlockAt) * 60000;
-  const pct = Math.min(100, (elapsedMs / targetMs) * 100);
-  if (trackFill) {
-    trackFill.style.width = `${pct.toFixed(2)}%`;
-    trackFill.classList.remove('t0', 't1', 't2', 't3');
-    trackFill.classList.add(`t${tier}`);
-  }
-
-  steps.forEach(step => {
-    const stepTier = Number(step.dataset.tier);
-    step.classList.remove('active', 't0', 't3');
-    step.classList.toggle('reached', stepTier < tier);
-    if (stepTier === tier) {
-      step.classList.add('active');
-      if (stepTier === 0) step.classList.add('t0');
-      if (stepTier === 3) step.classList.add('t3');
-    }
-  });
-
-  document.getElementById('tierCard1').classList.toggle('visible', tier >= 1);
-  document.getElementById('tierCard2').classList.toggle('visible', tier >= 2);
-  document.getElementById('tierCard3').classList.toggle('visible', tier >= 3);
-
-  const unlockBtn = document.getElementById('unlockAiBtn');
-  if (unlockBtn) unlockBtn.disabled = tier < 3;
+  if (unlockBtn) unlockBtn.disabled = !earned;
 }
 
-function refreshHintState() {
+function refreshState() {
   chrome.runtime.sendMessage({ type: 'GET_STATE' }, response => {
     void chrome.runtime.lastError;
     if (!response) return;
-    const { local, hintTiers: tiers } = response;
-    if (tiers) {
-      hintTiers = { ...hintTiers, ...tiers };
-      updateTierTimeLabels();
+    const { local, hintTiers: rule } = response;  // legacy key name
+    if (rule) {
+      unlockRule = { ...unlockRule, ...rule };
+      updateUnlockLabel();
     }
     problemStartTime = local.problemStartTime;
     problemPausedAt  = local.problemPausedAt || null;
 
-    const hardcoreActive = local.focusSession && local.focusSession.hardcore && Date.now() < local.focusSession.endTime;
-    isHardcoreSession = !!hardcoreActive;
-    const timeline = document.getElementById('hintTimeline');
-    if (timeline) timeline.style.display = hardcoreActive ? 'none' : '';
-    if (hardcoreActive) {
-      document.getElementById('tierCard1').classList.remove('visible');
-      document.getElementById('tierCard2').classList.remove('visible');
-      document.getElementById('tierCard3').classList.remove('visible');
-      return;
-    }
-    renderHintTick();
+    const fs = local.focusSession;
+    isHardcoreSession = !!(fs && fs.hardcore &&
+      (fs.pausedRemainingMs > 0 || Date.now() < fs.endTime));
+    if (fs) sessionData = fs;
+
+    renderTick();
   });
 }
 
@@ -259,18 +251,19 @@ document.getElementById('unlockAiBtn').addEventListener('click', () => {
   const safeDomain = domain && /^([a-z0-9-]+\.)+[a-z]{2,}(\/[A-Za-z0-9_\-./]*)?$/.test(domain)
     ? domain : null;
   const targetUrl = safeDomain ? `https://${safeDomain}` : null;
-  chrome.runtime.sendMessage({ type: 'HINT_UNLOCK', targetUrl }, resp => {
+  chrome.runtime.sendMessage({ type: 'EARN_UNLOCK', targetUrl }, resp => {
     void chrome.runtime.lastError;
     if (!resp || resp.ok === false) {
       btn.disabled = false;
       const lbl = document.getElementById('unlockAiBtnLabel');
       if (lbl && resp && resp.reason === 'not_earned') {
         lbl.textContent = `Need ${resp.required - resp.elapsed}m more first`;
-        setTimeout(() => updateTierTimeLabels(), 2500);
+        setTimeout(updateUnlockLabel, 2500);
       }
       return;
     }
-    // Background handles the tab.update; if it didn't (no sender.tab or no targetUrl), fall back here.
+    // Background handles the tab.update; if it didn't (no sender.tab or no
+    // targetUrl), fall back here.
     if (!targetUrl) navigateToFocusPlatform();
   });
 });
@@ -302,20 +295,13 @@ chrome.runtime.sendMessage({ type: 'GET_STATE' }, response => {
         renderBigTimer();
       }, 1000);
     }
-
-    document.getElementById('footerNote').textContent = sessionData.pausedRemainingMs
-      ? 'Focus session paused (snoozed)'
-      : sessionData.hardcore
-        ? 'Hardcore mode — stays locked until session ends'
-        : 'Focus session active — solve it, then unlock AI';
   }
 
-  // Kick off hint timeline:
-  //   - refreshHintState() syncs settings + problemStartTime from background (slow)
-  //   - renderHintTick() updates the bar/text locally every second (fast, no IPC)
-  refreshHintState();
-  hintInterval = setInterval(refreshHintState, 30000);
-  tickInterval = setInterval(renderHintTick, 1000);
+  // refreshState() syncs settings + problemStartTime from the background (slow);
+  // renderTick() updates the dial locally every second (fast, no IPC).
+  refreshState();
+  stateInterval = setInterval(refreshState, 30000);
+  tickInterval  = setInterval(renderTick, 1000);
 });
 
 function renderBigTimer() {
@@ -323,11 +309,8 @@ function renderBigTimer() {
   const remaining = sessionData.pausedRemainingMs
     ? sessionData.pausedRemainingMs
     : Math.max(0, sessionData.endTime - Date.now());
-  const totalSecs = Math.floor(remaining / 1000);
-  const m = Math.floor(totalSecs / 60);
-  const s = totalSecs % 60;
-  document.getElementById('sessionTimerBig').textContent =
-    `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  // Same rounding as the big clock, so the two never disagree by a second.
+  document.getElementById('sessionTimerBig').textContent = mmss(remaining);
 }
 
 // ─── "I solved it" button ────────────────────────────────────────────────────
@@ -356,7 +339,7 @@ document.getElementById('solvedBtn').addEventListener('click', () => {
     document.getElementById('successSub').textContent   = 'Hardcore mode stays active — keep going!';
     setTimeout(navigateToFocusPlatform, 2000);
   } else {
-    const unlockMin = hintTiers.unlockMinutes || 10;
+    const unlockMin = unlockRule.unlockMinutes || 10;
     document.getElementById('successTitle').textContent = `Problem solved! Unlocking AI for ${unlockMin} min…`;
     document.getElementById('successSub').textContent   = domain
       ? `Opening ${domain}…`
@@ -387,21 +370,13 @@ function navigateToFocusPlatform() {
     const platform = response && response.settings && response.settings.enabledPlatforms
       ? response.settings.enabledPlatforms[0]
       : 'codeforces';
-    const urls = {
-      codeforces: 'https://codeforces.com',
-      leetcode:   'https://leetcode.com',
-      atcoder:    'https://atcoder.jp',
-      hackerrank: 'https://hackerrank.com',
-      codechef:   'https://codechef.com',
-      cses:       'https://cses.fi',
-    };
-    window.location.href = urls[platform] || 'https://codeforces.com';
+    window.location.href = platformUrl(platform);
   });
 }
 
 // ─── Cleanup ─────────────────────────────────────────────────────────────────
 window.addEventListener('unload', () => {
   if (timerInterval) clearInterval(timerInterval);
-  if (hintInterval)  clearInterval(hintInterval);
+  if (stateInterval) clearInterval(stateInterval);
   if (tickInterval)  clearInterval(tickInterval);
 });
