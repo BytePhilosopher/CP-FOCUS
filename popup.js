@@ -270,6 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
       primaryBtn.dataset.action = 'end';
     }
 
+    $('primaryIcon').style.display = primaryBtn.dataset.action === 'start' ? '' : 'none';
     practiceLabel.textContent = hasTabs ? 'Go to practice' : 'Open practice';
 
     // Snooze is offered whenever blocking is in effect (never during hardcore).

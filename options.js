@@ -1,52 +1,15 @@
-// CF Focus v2.0 — options.js
+// CF Focus — options.js
 
-const PLATFORMS = {
-  codeforces: { name: 'Codeforces',  sub: 'codeforces.com',  abbr: 'CF' },
-  leetcode:   { name: 'LeetCode',    sub: 'leetcode.com',    abbr: 'LC' },
-  atcoder:    { name: 'AtCoder',     sub: 'atcoder.jp',      abbr: 'AC' },
-  hackerrank: { name: 'HackerRank',  sub: 'hackerrank.com',  abbr: 'HR' },
-  codechef:   { name: 'CodeChef',    sub: 'codechef.com',    abbr: 'CC' },
-  cses:       { name: 'CSES',        sub: 'cses.fi',         abbr: 'CS' },
-};
-
-const DEFAULT_BLOCKED = [
-  { id: 'chatgpt',    name: 'ChatGPT' },
-  { id: 'openai',     name: 'OpenAI Chat' },
-  { id: 'claude',     name: 'Claude' },
-  { id: 'gemini',     name: 'Gemini' },
-  { id: 'copilot',    name: 'Copilot' },
-  { id: 'bingchat',   name: 'Bing Chat' },
-  { id: 'perplexity', name: 'Perplexity' },
-  { id: 'phind',      name: 'Phind' },
-  { id: 'poe',        name: 'Poe' },
-  { id: 'deepseek',   name: 'DeepSeek' },
-  { id: 'grok',       name: 'Grok' },
-  { id: 'mistral',    name: 'Mistral' },
-  { id: 'you',        name: 'You.com' },
-  { id: 'cohere',     name: 'Cohere' },
-  { id: 'hfchat',     name: 'HF Chat' },
-  { id: 'aistudio',   name: 'AI Studio' },
-  { id: 'writesonic', name: 'Writesonic' },
-  { id: 'xai',        name: 'xAI' },
-  { id: 'character',  name: 'Character.AI' },
-];
-
+const { PLATFORMS, DEFAULT_BLOCKED } = CF;
+const DEFAULTS = CF.DEFAULT_SETTINGS;
+const DEFAULT_UNLOCK = DEFAULTS.hintTiers;
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-const DEFAULT_UNLOCK = { unlockAt: 35, unlockMinutes: 10 };
-
-const DEFAULTS = {
-  enabledPlatforms: ['codeforces', 'leetcode', 'atcoder', 'hackerrank', 'codechef', 'cses'],
-  disabledDefaults: [],
-  customBlocklist: [],
-  customPlatforms: [],
-  snoozeUntil: 0,
-  snoozeDuration: 15,
-  schedule: { enabled: false, days: [1, 2, 3, 4, 5], startHour: 9, endHour: 21 },
-  pin: null,
-  dailyGoal: 120,
-  breakReminder: 50,
-  hintTiers: { ...DEFAULT_UNLOCK },   // legacy key name, see background.js
+// Everything in chrome.storage.local that counts as "stats" (exported, reset).
+const STAT_DEFAULTS = {
+  totalSessions: 0, totalMinutes: 0, currentStreak: 0, longestStreak: 0,
+  lastSessionDate: null, aiBlocksAvoided: 0, problemsSolved: 0, focusSessionsCompleted: 0,
+  dayLog: {}, todayDate: null, todayMinutes: 0, todayBlocks: 0, todaySolved: 0, todaySessions: 0,
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -55,17 +18,7 @@ function getSettings() {
   return new Promise(resolve => chrome.storage.sync.get(DEFAULTS, resolve));
 }
 function getStats() {
-  return new Promise(resolve => chrome.storage.local.get({
-    totalSessions: 0, totalMinutes: 0, currentStreak: 0, longestStreak: 0,
-    aiBlocksAvoided: 0, problemsSolved: 0,
-  }, resolve));
-}
-function getDayLog() {
-  return new Promise(resolve => chrome.storage.local.get({
-    dayLog: {},
-    // Today isn't archived until midnight, so overlay the live counters on it.
-    todayDate: null, todayMinutes: 0, todayBlocks: 0, todaySolved: 0, todaySessions: 0,
-  }, resolve));
+  return new Promise(resolve => chrome.storage.local.get(STAT_DEFAULTS, resolve));
 }
 function saveSettings(partial) {
   return new Promise(resolve => chrome.storage.sync.set(partial, () => {
@@ -75,6 +28,12 @@ function saveSettings(partial) {
     resolve();
   }));
 }
+function send(msg) {
+  return new Promise(resolve => chrome.runtime.sendMessage(msg, resp => {
+    void chrome.runtime.lastError;
+    resolve(resp);
+  }));
+}
 
 async function hashPin(pin) {
   const data = new TextEncoder().encode('cf-focus-v2:' + pin);
@@ -82,13 +41,38 @@ async function hashPin(pin) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// The streak stored on disk only changes when a session ends, so it reads as
+// still alive after a missed day. Mirror background.js's liveStreak().
+function liveStreak(stats) {
+  const today = CF.dayKey();
+  const yesterday = CF.dayKey(CF.addDays(new Date(), -1));
+  return (stats.lastSessionDate === today || stats.lastSessionDate === yesterday)
+    ? (stats.currentStreak || 0) : 0;
+}
+
+// Archived days, with today overlaid from the live counters.
+function daysWithToday(stats) {
+  const days = { ...(stats.dayLog || {}) };
+  const todayKey = CF.dayKey();
+  if (stats.todayDate === todayKey &&
+      (stats.todayMinutes || stats.todayBlocks || stats.todaySolved)) {
+    days[todayKey] = {
+      m: stats.todayMinutes || 0, b: stats.todayBlocks || 0,
+      s: stats.todaySolved || 0,  n: stats.todaySessions || 0,
+    };
+  }
+  return days;
+}
+
 // Ask Chrome for host access to a custom domain so DNR rules can fire on it.
 // User-gesture-initiated, so the browser will show its native permission prompt.
+function hostOrigins(domain) {
+  return [`*://${domain}/*`, `*://*.${domain}/*`];
+}
 function requestHostPermissionFor(domain) {
   return new Promise(resolve => {
-    const origins = [`*://${domain}/*`, `*://*.${domain}/*`];
     try {
-      chrome.permissions.request({ origins }, granted => {
+      chrome.permissions.request({ origins: hostOrigins(domain) }, granted => {
         void chrome.runtime.lastError;
         resolve(!!granted);
       });
@@ -97,12 +81,10 @@ function requestHostPermissionFor(domain) {
     }
   });
 }
-
 function hasHostPermissionFor(domain) {
   return new Promise(resolve => {
-    const origins = [`*://${domain}/*`, `*://*.${domain}/*`];
     try {
-      chrome.permissions.contains({ origins }, has => {
+      chrome.permissions.contains({ origins: hostOrigins(domain) }, has => {
         void chrome.runtime.lastError;
         resolve(!!has);
       });
@@ -111,16 +93,46 @@ function hasHostPermissionFor(domain) {
     }
   });
 }
+function releaseHostPermissionFor(domain) {
+  // Never drop access the manifest grants up front for a default site.
+  if (DEFAULT_BLOCKED.some(s => CF.hostMatches(domain, s.domain))) return;
+  try { chrome.permissions.remove({ origins: hostOrigins(domain) }, () => { void chrome.runtime.lastError; }); } catch (_) {}
+}
 
 let saveTimer = null;
-function flashSaved() {
+function flashSaved(text) {
   const el = document.getElementById('saveIndicator');
+  el.lastChild.textContent = ' ' + (text || 'Saved');
   el.classList.add('show');
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => el.classList.remove('show'), 1800);
 }
 
+function flashInvalid(input) {
+  input.style.borderColor = 'var(--red)';
+  input.focus();
+  setTimeout(() => { input.style.borderColor = ''; }, 1500);
+}
+
+// Div-based toggles get keyboard support: focusable, and Enter/Space clicks.
+function makeKeyboardClickable(el) {
+  el.tabIndex = 0;
+  el.setAttribute('role', 'button');
+}
+document.addEventListener('keydown', e => {
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.getAttribute &&
+      e.target.getAttribute('role') === 'button' && e.target.tagName !== 'BUTTON') {
+    e.preventDefault();
+    e.target.click();
+  }
+});
+
 // ─── PIN modal ────────────────────────────────────────────────────────────────
+// Wrong guesses lock the form for an increasing time, so the PIN can't simply
+// be brute-forced. The counter lives in chrome.storage.local so reloading the
+// page doesn't reset it.
+
+const PIN_FREE_TRIES = 3;
 
 async function checkPin() {
   const settings = await getSettings();
@@ -134,31 +146,88 @@ async function checkPin() {
   const errEl  = document.getElementById('pinModalError');
   const submit = document.getElementById('pinModalSubmit');
 
-  async function verify() {
-    const hash = await hashPin(input.value);
-    if (hash === settings.pin) {
-      modal.classList.add('hidden');
-      showPage();
-    } else {
-      errEl.textContent = 'Incorrect PIN';
-      input.value = '';
+  const getLock = () => new Promise(r => chrome.storage.local.get({ pinFails: 0, pinLockUntil: 0 }, r));
+  let lockTimer = null;
+
+  async function paintLock() {
+    const { pinLockUntil } = await getLock();
+    const left = Math.ceil((pinLockUntil - Date.now()) / 1000);
+    const locked = left > 0;
+    input.disabled = submit.disabled = locked;
+    clearTimeout(lockTimer);
+    if (locked) {
+      errEl.className = 'pin-error locked';
+      errEl.textContent = `Too many attempts — try again in ${left}s`;
+      lockTimer = setTimeout(paintLock, 1000);
+    } else if (errEl.classList.contains('locked')) {
+      errEl.className = 'pin-error';
+      errEl.textContent = '';
       input.focus();
     }
+  }
+
+  async function verify() {
+    const { pinFails, pinLockUntil } = await getLock();
+    if (pinLockUntil > Date.now()) return paintLock();
+    const hash = await hashPin(input.value);
+    if (hash === settings.pin) {
+      chrome.storage.local.set({ pinFails: 0, pinLockUntil: 0 });
+      modal.classList.add('hidden');
+      showPage();
+      return;
+    }
+    const fails = pinFails + 1;
+    const lockSecs = fails >= PIN_FREE_TRIES ? Math.min(300, 15 * 2 ** (fails - PIN_FREE_TRIES)) : 0;
+    await new Promise(r => chrome.storage.local.set({
+      pinFails: fails, pinLockUntil: lockSecs ? Date.now() + lockSecs * 1000 : 0,
+    }, r));
+    input.value = '';
+    errEl.className = 'pin-error';
+    errEl.textContent = 'Incorrect PIN';
+    if (lockSecs) paintLock(); else input.focus();
   }
   submit.addEventListener('click', verify);
   input.addEventListener('keydown', e => { if (e.key === 'Enter') verify(); });
   input.focus();
+  paintLock();
 }
 
 function showPage() {
   loadAll();
+  // Stats update live while the page is open.
+  let t = null;
+  chrome.storage.onChanged.addListener((_changes, area) => {
+    if (area !== 'local') return;
+    clearTimeout(t);
+    t = setTimeout(refreshStats, 300);
+  });
+  if (new URLSearchParams(location.search).get('welcome') === '1') showWelcome();
+}
+
+async function refreshStats() {
+  const [settings, stats] = await Promise.all([getSettings(), getStats()]);
+  renderCalendar(stats, settings);
+  renderStats(stats, settings);
+}
+
+async function showWelcome() {
+  const settings = await getSettings();
+  document.getElementById('welcomeUnlock').textContent =
+    (settings.hintTiers && settings.hintTiers.unlockAt) || DEFAULT_UNLOCK.unlockAt;
+  const w = document.getElementById('welcome');
+  w.classList.remove('hidden');
+  document.getElementById('welcomeDone').onclick = () => {
+    w.classList.add('hidden');
+    history.replaceState(null, '', location.pathname + location.hash);
+  };
 }
 
 // ─── Render ───────────────────────────────────────────────────────────────────
 
 async function loadAll() {
-  const [settings, stats, log] = await Promise.all([getSettings(), getStats(), getDayLog()]);
-  renderCalendar(log, settings, stats);
+  const [settings, stats] = await Promise.all([getSettings(), getStats()]);
+  renderCalendar(stats, settings);
+  renderStats(stats, settings);
   renderPlatforms(settings);
   renderDefaultSites(settings);
   renderCustomList(settings.customBlocklist);
@@ -168,7 +237,6 @@ async function loadAll() {
   renderSchedule(settings);
   renderUnlockRule(settings);
   renderPin(settings);
-  renderStats(stats);
 }
 
 function renderUnlockRule(settings) {
@@ -182,6 +250,7 @@ function renderUnlockRule(settings) {
   dur.value = rule.unlockMinutes;
 
   function clamp(input, min, max) {
+    if (input.value.trim() === '') return null;
     const v = Math.round(Number(input.value));
     if (!Number.isFinite(v)) return null;
     return Math.min(max, Math.max(min, v));
@@ -221,17 +290,19 @@ function renderUnlockRule(settings) {
 
 function renderPlatforms(settings) {
   const grid = document.getElementById('platformGrid');
-  grid.innerHTML = '';
+  grid.textContent = '';
 
   for (const [key, p] of Object.entries(PLATFORMS)) {
     const enabled = settings.enabledPlatforms.includes(key);
     const card = document.createElement('div');
     card.className = `platform-card${enabled ? ' active' : ''}`;
     card.dataset.platform = key;
+    card.setAttribute('aria-pressed', String(enabled));
+    makeKeyboardClickable(card);
     card.innerHTML = `
       <div class="platform-planet">${p.abbr}</div>
       <div class="platform-card-name">${p.name}</div>
-      <div class="platform-card-domain">${p.sub}</div>
+      <div class="platform-card-domain">${p.domains[0]}</div>
       <div class="platform-dot"></div>`;
     grid.appendChild(card);
   }
@@ -240,6 +311,7 @@ function renderPlatforms(settings) {
     const card = e.target.closest('[data-platform]');
     if (!card) return;
     const isActive = card.classList.toggle('active');
+    card.setAttribute('aria-pressed', String(isActive));
     const key = card.dataset.platform;
     const s = await getSettings();
     let platforms = [...s.enabledPlatforms];
@@ -290,6 +362,7 @@ function renderCustomPlatforms(customPlatforms) {
     const removeBtn = document.createElement('button');
     removeBtn.className = 'cp-item-remove';
     removeBtn.title = 'Remove';
+    removeBtn.setAttribute('aria-label', `Remove ${cp.name}`);
     removeBtn.dataset.remove = cp.domain;
     removeBtn.innerHTML =
       '<svg viewBox="0 0 10 10" fill="none" width="12" height="12">' +
@@ -309,35 +382,26 @@ function renderCustomPlatforms(customPlatforms) {
     const updated = (s.customPlatforms || []).filter(cp => cp.domain !== btn.dataset.remove);
     await saveSettings({ customPlatforms: updated });
     renderCustomPlatforms(updated);
-    flashSaved();
+    flashSaved('Removed');
   };
 }
 
 async function addCustomPlatform() {
   const nameInput   = document.getElementById('cpName');
   const domainInput = document.getElementById('cpDomain');
-  const name = nameInput.value.trim();
-  let domain = domainInput.value.trim().toLowerCase()
-    .replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  const name = nameInput.value.trim().slice(0, 40);
+  const domain = CF.normalizeDomain(domainInput.value);
 
-  if (!name) {
-    nameInput.style.borderColor = 'var(--red)';
-    setTimeout(() => { nameInput.style.borderColor = ''; }, 1500);
-    return;
-  }
-
-  const domainRe = /^([a-z0-9-]+\.)+[a-z]{2,}(:[0-9]+)?$/;
-  if (!domainRe.test(domain)) {
-    domainInput.style.borderColor = 'var(--red)';
-    setTimeout(() => { domainInput.style.borderColor = ''; }, 1500);
-    return;
-  }
+  if (!name) return flashInvalid(nameInput);
+  if (!CF.DOMAIN_RE.test(domain)) return flashInvalid(domainInput);
 
   const s = await getSettings();
   const existing = s.customPlatforms || [];
-  if (existing.some(cp => cp.domain === domain)) {
+  const builtIn = Object.values(PLATFORMS).some(p => p.domains.some(d => CF.hostMatches(domain, d)));
+  if (builtIn || existing.some(cp => cp.domain === domain)) {
     nameInput.value = '';
     domainInput.value = '';
+    flashSaved(builtIn ? 'Already a built-in platform' : 'Already added');
     return;
   }
 
@@ -348,29 +412,33 @@ async function addCustomPlatform() {
   nameInput.value = '';
   domainInput.value = '';
   renderCustomPlatforms(updated);
-  flashSaved();
+  flashSaved('Platform added');
 }
 
 function updateSiteCount() {
   const chips = document.querySelectorAll('#defaultSites .ai-chip');
   const active = [...chips].filter(c => c.classList.contains('active')).length;
-  const el = document.getElementById('sitesEnabledCount');
-  if (el) el.textContent = active;
-  const tot = document.getElementById('sitesTotalCount');
-  if (tot) tot.textContent = DEFAULT_BLOCKED.length;
+  document.getElementById('sitesEnabledCount').textContent = active;
+  document.getElementById('sitesTotalCount').textContent = DEFAULT_BLOCKED.length;
 }
 
 function renderDefaultSites(settings) {
   const list = document.getElementById('defaultSites');
   list.className = 'ai-chips';
-  list.innerHTML = '';
+  list.textContent = '';
 
   for (const site of DEFAULT_BLOCKED) {
     const enabled = !settings.disabledDefaults.includes(site.id);
     const chip = document.createElement('div');
     chip.className = `ai-chip${enabled ? ' active' : ''}`;
     chip.dataset.site = site.id;
-    chip.innerHTML = `<span class="ai-chip-dot"></span>${site.name}`;
+    chip.title = site.path ? site.domain + site.path : site.domain;
+    chip.setAttribute('aria-pressed', String(enabled));
+    makeKeyboardClickable(chip);
+    const dot = document.createElement('span');
+    dot.className = 'ai-chip-dot';
+    chip.appendChild(dot);
+    chip.appendChild(document.createTextNode(site.name));
     list.appendChild(chip);
   }
   updateSiteCount();
@@ -379,6 +447,7 @@ function renderDefaultSites(settings) {
     const chip = e.target.closest('[data-site]');
     if (!chip) return;
     const isActive = chip.classList.toggle('active');
+    chip.setAttribute('aria-pressed', String(isActive));
     updateSiteCount();
     const s = await getSettings();
     let disabled = [...s.disabledDefaults];
@@ -392,24 +461,18 @@ function renderDefaultSites(settings) {
   };
 
   // Bulk toggle buttons
-  const enableAll = document.getElementById('enableAllSites');
-  const disableAll = document.getElementById('disableAllSites');
-  if (enableAll) {
-    enableAll.onclick = async () => {
-      document.querySelectorAll('#defaultSites .ai-chip').forEach(c => c.classList.add('active'));
-      updateSiteCount();
-      await saveSettings({ disabledDefaults: [] });
-      flashSaved();
-    };
-  }
-  if (disableAll) {
-    disableAll.onclick = async () => {
-      document.querySelectorAll('#defaultSites .ai-chip').forEach(c => c.classList.remove('active'));
-      updateSiteCount();
-      await saveSettings({ disabledDefaults: DEFAULT_BLOCKED.map(s => s.id) });
-      flashSaved();
-    };
-  }
+  document.getElementById('enableAllSites').onclick = async () => {
+    document.querySelectorAll('#defaultSites .ai-chip').forEach(c => c.classList.add('active'));
+    updateSiteCount();
+    await saveSettings({ disabledDefaults: [] });
+    flashSaved();
+  };
+  document.getElementById('disableAllSites').onclick = async () => {
+    document.querySelectorAll('#defaultSites .ai-chip').forEach(c => c.classList.remove('active'));
+    updateSiteCount();
+    await saveSettings({ disabledDefaults: DEFAULT_BLOCKED.map(s => s.id) });
+    flashSaved();
+  };
 }
 
 function renderCustomList(customBlocklist) {
@@ -429,6 +492,7 @@ function renderCustomList(customBlocklist) {
     const btn = document.createElement('button');
     btn.dataset.remove = domain;
     btn.title = 'Remove';
+    btn.setAttribute('aria-label', `Remove ${domain}`);
     btn.textContent = '×';
     tag.appendChild(btn);
     container.appendChild(tag);
@@ -440,61 +504,52 @@ function renderCustomList(customBlocklist) {
     const s = await getSettings();
     const updated = s.customBlocklist.filter(d => d !== btn.dataset.remove);
     await saveSettings({ customBlocklist: updated });
+    releaseHostPermissionFor(btn.dataset.remove);
     renderCustomList(updated);
+    flashSaved('Removed');
+  };
+}
+
+// The three chip rows (snooze, goal, break) all work the same way.
+function bindChipRow(rowId, attr, key, current) {
+  const row = document.getElementById(rowId);
+  const chips = row.querySelectorAll('.snooze-chip');
+  chips.forEach(chip => {
+    makeKeyboardClickable(chip);
+    chip.classList.toggle('selected', Number(chip.dataset[attr]) === current);
+  });
+  row.onclick = async e => {
+    const chip = e.target.closest(`[data-${attr}]`);
+    if (!chip) return;
+    chips.forEach(c => c.classList.remove('selected'));
+    chip.classList.add('selected');
+    await saveSettings({ [key]: Number(chip.dataset[attr]) });
     flashSaved();
   };
 }
 
 function renderSnooze(settings) {
-  const current = settings.snoozeDuration || 15;
-  const chips = document.querySelectorAll('#snoozeChips .snooze-chip');
-  chips.forEach(chip => {
-    chip.classList.toggle('selected', Number(chip.dataset.dur) === current);
-  });
-  document.getElementById('snoozeChips').onclick = async e => {
-    const chip = e.target.closest('[data-dur]');
-    if (!chip) return;
-    chips.forEach(c => c.classList.remove('selected'));
-    chip.classList.add('selected');
-    await saveSettings({ snoozeDuration: Number(chip.dataset.dur) });
-    flashSaved();
-  };
+  bindChipRow('snoozeChips', 'dur', 'snoozeDuration', settings.snoozeDuration || 15);
 }
 
 function renderDailyGoal(settings) {
-  const current = settings.dailyGoal || 120;
-  const chips = document.querySelectorAll('#goalChips .snooze-chip');
-  chips.forEach(chip => {
-    chip.classList.toggle('selected', Number(chip.dataset.goal) === current);
-  });
-  document.getElementById('goalChips').onclick = async e => {
-    const chip = e.target.closest('[data-goal]');
-    if (!chip) return;
-    chips.forEach(c => c.classList.remove('selected'));
-    chip.classList.add('selected');
-    await saveSettings({ dailyGoal: Number(chip.dataset.goal) });
-    flashSaved();
-  };
+  bindChipRow('goalChips', 'goal', 'dailyGoal', settings.dailyGoal || 120);
 }
 
 function renderBreakReminder(settings) {
-  const current = settings.breakReminder != null ? settings.breakReminder : 50;
-  const chips = document.querySelectorAll('#breakChips .snooze-chip');
-  chips.forEach(chip => {
-    chip.classList.toggle('selected', Number(chip.dataset.break) === current);
-  });
-  document.getElementById('breakChips').onclick = async e => {
-    const chip = e.target.closest('[data-break]');
-    if (!chip) return;
-    chips.forEach(c => c.classList.remove('selected'));
-    chip.classList.add('selected');
-    await saveSettings({ breakReminder: Number(chip.dataset.break) });
-    flashSaved();
-  };
+  bindChipRow('breakChips', 'break', 'breakReminder',
+    settings.breakReminder != null ? settings.breakReminder : 50);
+}
+
+function fmtHour(h) {
+  if (h === 0)  return '12 AM';
+  if (h < 12)   return `${h} AM`;
+  if (h === 12) return '12 PM';
+  return `${h - 12} PM`;
 }
 
 function renderSchedule(settings) {
-  const sch        = settings.schedule || DEFAULTS.schedule;
+  const sch        = { ...DEFAULTS.schedule, ...(settings.schedule || {}) };
   const enabledCb  = document.getElementById('scheduleEnabled');
   const body       = document.getElementById('scheduleBody');
   const enableCard = document.getElementById('schedEnableCard');
@@ -515,20 +570,13 @@ function renderSchedule(settings) {
     enableCard.classList.toggle('on', on);
     updatePreview();
     const s = await getSettings();
-    await saveSettings({ schedule: { ...s.schedule, enabled: on } });
+    await saveSettings({ schedule: { ...DEFAULTS.schedule, ...s.schedule, enabled: on } });
     flashSaved();
   };
 
   // Populate hour selects
   const startH = document.getElementById('startHour');
   const endH   = document.getElementById('endHour');
-
-  function fmtHour(h) {
-    if (h === 0)  return '12 AM';
-    if (h < 12)   return `${h} AM`;
-    if (h === 12) return '12 PM';
-    return `${h - 12} PM`;
-  }
 
   function populateSelect(sel, current) {
     if (sel.options.length === 0) {
@@ -545,30 +593,31 @@ function renderSchedule(settings) {
   populateSelect(startH, sch.startHour);
   populateSelect(endH,   sch.endHour);
 
-  // Timeline + preview
+  // Timeline: one segment for a same-day window, two for an overnight one
+  // (start → midnight and midnight → end).
   function updateTimeline() {
     const start = Number(startH.value);
     const end   = Number(endH.value);
-    const fill  = document.getElementById('schedTimelineFill');
-    if (!fill) return;
-    // Overnight windows are visually two segments; CSS supports one fill, so we approximate
-    // by drawing the "since-midnight" portion plus the "until-midnight" portion combined.
+    const a = document.getElementById('schedTimelineFill');
+    const b = document.getElementById('schedTimelineFill2');
+    const seg = (el, from, to) => {
+      el.style.left  = `${(from / 24) * 100}%`;
+      el.style.width = `${((to - from) / 24) * 100}%`;
+    };
     if (end > start) {
-      fill.style.left  = `${(start / 24) * 100}%`;
-      fill.style.width = `${((end - start) / 24) * 100}%`;
+      seg(a, start, end); seg(b, 0, 0);
     } else if (end < start) {
-      // Show the larger of the two halves to indicate overnight
-      fill.style.left  = `${(start / 24) * 100}%`;
-      fill.style.width = `${((24 - start) / 24) * 100}%`;
+      seg(a, start, 24); seg(b, 0, end);
     } else {
-      fill.style.left  = '0%';
-      fill.style.width = '0%';
+      seg(a, 0, 0); seg(b, 0, 0);
     }
+    const now = new Date();
+    document.getElementById('schedNow').style.left =
+      `${((now.getHours() + now.getMinutes() / 60) / 24) * 100}%`;
   }
 
   function updatePreview() {
     const preview = document.getElementById('schedPreview');
-    if (!preview) return;
     const start      = Number(startH.value);
     const end        = Number(endH.value);
     const activeDays = [...document.querySelectorAll('#dayGrid .day-chip.selected')]
@@ -601,14 +650,11 @@ function renderSchedule(settings) {
     preview.className = 'sched-preview live';
   }
 
-  updateTimeline();
-  updatePreview();
-
   async function saveHours() {
     updateTimeline();
     updatePreview();
     const s = await getSettings();
-    await saveSettings({ schedule: { ...s.schedule, startHour: Number(startH.value), endHour: Number(endH.value) } });
+    await saveSettings({ schedule: { ...DEFAULTS.schedule, ...s.schedule, startHour: Number(startH.value), endHour: Number(endH.value) } });
     flashSaved();
   }
   startH.onchange = saveHours;
@@ -616,12 +662,13 @@ function renderSchedule(settings) {
 
   // Day chips
   const dayGrid = document.getElementById('dayGrid');
-  dayGrid.innerHTML = '';
+  dayGrid.textContent = '';
   for (let i = 0; i < 7; i++) {
     const chip = document.createElement('div');
     chip.className = 'day-chip' + (sch.days.includes(i) ? ' selected' : '');
     chip.textContent = DAYS[i];
     chip.dataset.day = i;
+    makeKeyboardClickable(chip);
     dayGrid.appendChild(chip);
   }
   dayGrid.onclick = async e => {
@@ -631,9 +678,12 @@ function renderSchedule(settings) {
     updatePreview();
     const activeDays = [...dayGrid.querySelectorAll('.day-chip.selected')].map(c => Number(c.dataset.day));
     const s = await getSettings();
-    await saveSettings({ schedule: { ...s.schedule, days: activeDays } });
+    await saveSettings({ schedule: { ...DEFAULTS.schedule, ...s.schedule, days: activeDays } });
     flashSaved();
   };
+
+  updateTimeline();
+  updatePreview();
 }
 
 function renderPin(settings) {
@@ -650,13 +700,15 @@ function renderPin(settings) {
     statusTitle.textContent = 'Settings are protected';
     statusSub.textContent   = 'A PIN is required to access this page';
     statusBadge.textContent = 'Protected';
-    if (removeSect) removeSect.style.display = '';
+    removeSect.style.display = '';
+    setPinBtn.textContent = 'Change PIN';
   } else {
     statusCard.classList.remove('protected');
     statusTitle.textContent = 'No PIN set';
     statusSub.textContent   = 'Your settings are unlocked';
     statusBadge.textContent = 'Unprotected';
-    if (removeSect) removeSect.style.display = 'none';
+    removeSect.style.display = 'none';
+    setPinBtn.textContent = 'Set PIN';
   }
 
   setPinBtn.onclick = async () => {
@@ -684,17 +736,16 @@ function renderPin(settings) {
     renderPin({ ...settings, pin: hash });
     flashSaved();
   };
+  document.getElementById('confirmPin').onkeydown = e => { if (e.key === 'Enter') setPinBtn.click(); };
 
-  const removePinBtn = document.getElementById('removePinBtn');
-  if (removePinBtn) {
-    removePinBtn.onclick = async () => {
-      await saveSettings({ pin: null });
-      msgEl.textContent = 'PIN removed';
-      msgEl.className   = 'pin-msg ok';
-      renderPin({ ...settings, pin: null });
-      flashSaved();
-    };
-  }
+  document.getElementById('removePinBtn').onclick = async () => {
+    if (!confirm('Remove the PIN? Anyone using this browser will be able to change settings.')) return;
+    await saveSettings({ pin: null });
+    msgEl.textContent = 'PIN removed';
+    msgEl.className   = 'pin-msg ok';
+    renderPin({ ...settings, pin: null });
+    flashSaved();
+  };
 }
 
 // ─── Lock-in calendar ─────────────────────────────────────────────────────────
@@ -706,10 +757,6 @@ function renderPin(settings) {
 const CAL_WEEKS  = 53;
 const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-// background.js keys days with toISOString().slice(0,10) — i.e. UTC. Match that
-// exactly, or cells drift by a day for anyone far from UTC.
-function utcKey(d) { return d.toISOString().slice(0, 10); }
-
 function calLevel(minutes, goal) {
   if (!minutes) return 0;
   const g = goal || 120;
@@ -719,38 +766,29 @@ function calLevel(minutes, goal) {
   return 1;
 }
 
-function describeDay(key, entry) {
-  if (!entry || !(entry.m || entry.b || entry.s)) return `${key} — no focus time`;
+function describeDay(date, entry) {
+  const label = date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  if (!entry || !(entry.m || entry.b || entry.s)) return `${label} — no focus time`;
   const parts = [];
-  if (entry.m) parts.push(`${entry.m}m focused`);
+  if (entry.m) parts.push(`${CF.fmtDuration(entry.m)} focused`);
   if (entry.b) parts.push(`${entry.b} AI blocked`);
-  if (entry.s) parts.push(`${entry.s} self-solved`);
-  return `${key} — ${parts.join(' · ')}`;
+  if (entry.s) parts.push(`${entry.s} solved`);
+  return `${label} — ${parts.join(' · ')}`;
 }
 
-function renderCalendar(log, settings, stats) {
+function renderCalendar(stats, settings) {
   const grid = document.getElementById('calGrid');
-  if (!grid) return;
   const monthsEl  = document.getElementById('calMonths');
   const subEl     = document.getElementById('calSub');
   const goal      = settings.dailyGoal || 120;
 
-  const todayKey = utcKey(new Date());
-
-  // Archived days, with today overlaid from the live counters.
-  const days = { ...(log.dayLog || {}) };
-  if (log.todayMinutes || log.todayBlocks || log.todaySolved) {
-    days[log.todayDate || todayKey] = {
-      m: log.todayMinutes || 0, b: log.todayBlocks  || 0,
-      s: log.todaySolved  || 0, n: log.todaySessions || 0,
-    };
-  }
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const todayKey = CF.dayKey(today);
+  const days = daysWithToday(stats);
 
   // Window: whole weeks, ending with the week that contains today.
-  const end = new Date(todayKey + 'T00:00:00Z');
-  end.setUTCDate(end.getUTCDate() + (6 - end.getUTCDay()));
-  const start = new Date(end);
-  start.setUTCDate(start.getUTCDate() - (CAL_WEEKS * 7 - 1));
+  const end = CF.addDays(today, 6 - today.getDay());
+  const start = CF.addDays(end, -(CAL_WEEKS * 7 - 1));
 
   grid.textContent = '';
   monthsEl.textContent = '';
@@ -758,14 +796,14 @@ function renderCalendar(log, settings, stats) {
   const LABEL_SPAN = 3;
   // The window opens mid-month, so seed with that month: labelling the partial
   // first column would crowd out the real label for the month that follows it.
-  let lastLabelMonth = start.getUTCMonth();
+  let lastLabelMonth = start.getMonth();
   let lastLabelWeek  = -Infinity;
-  const cursor = new Date(start);
+  let cursor = new Date(start);
   for (let week = 0; week < CAL_WEEKS; week++) {
     // Label a column when a new month begins in it. Labels are explicitly
     // placed, so two that overlap would push the whole row down — skip any
     // that can't clear the previous one's span.
-    const colMonth = cursor.getUTCMonth();
+    const colMonth = cursor.getMonth();
     if (colMonth !== lastLabelMonth && week < CAL_WEEKS - 1 &&
         week - lastLabelWeek >= LABEL_SPAN) {
       const label = document.createElement('span');
@@ -776,7 +814,7 @@ function renderCalendar(log, settings, stats) {
     }
     lastLabelMonth = colMonth;
     for (let d = 0; d < 7; d++) {
-      const key   = utcKey(cursor);
+      const key   = CF.dayKey(cursor);
       const entry = days[key];
       const cell  = document.createElement('i');
       if (key > todayKey) {
@@ -784,17 +822,17 @@ function renderCalendar(log, settings, stats) {
       } else {
         const level = calLevel(entry ? entry.m || 0 : 0, goal);
         cell.className = `cal-cell l${level}${key === todayKey ? ' today' : ''}`;
-        cell.title = describeDay(key, entry);
+        cell.title = describeDay(cursor, entry);
       }
       grid.appendChild(cell);
-      cursor.setUTCDate(cursor.getUTCDate() + 1);
+      cursor = CF.addDays(cursor, 1);
     }
   }
 
   // ── Summary line: this month, streak, year total ────────────────────────────
   const monthPrefix = todayKey.slice(0, 7);
   let monthDays = 0, yearDays = 0;
-  const yearCutoff = utcKey(start);
+  const yearCutoff = CF.dayKey(start);
   for (const [key, entry] of Object.entries(days)) {
     if (!entry || !entry.m) continue;
     if (key >= yearCutoff) yearDays += 1;
@@ -806,47 +844,164 @@ function renderCalendar(log, settings, stats) {
     // squares that reads as a rendering failure.
     ? 'No focus time recorded yet — open a practice tab and your first square lights up'
     : `${monthDays} day${monthDays === 1 ? '' : 's'} locked in this month · ` +
-      `${stats.currentStreak || 0} day streak · ${yearDays} days in the last year`;
+      `${liveStreak(stats)} day streak · ${yearDays} days in the last year`;
 }
 
-function renderStats(stats) {
-  const hours = ((stats.totalMinutes || 0) / 60).toFixed(1);
+// ─── All-time tiles + 30-day trend ────────────────────────────────────────────
 
-  // Update vertical bar chart (relative height scale)
-  const chartVals = [
-    { id: 'chartSessions', valId: 'chartSessionsVal', val: stats.totalSessions || 0 },
-    { id: 'chartHours',    valId: 'chartHoursVal',    val: parseFloat(hours) },
-    { id: 'chartBlocks',   valId: 'chartBlocksVal',   val: stats.aiBlocksAvoided || 0 },
-    { id: 'chartSolved',   valId: 'chartSolvedVal',   val: stats.problemsSolved || 0 },
-  ];
-  const chartMax = Math.max(...chartVals.map(v => v.val), 1);
-  // Delay height transition so it animates in after paint
-  requestAnimationFrame(() => {
-    chartVals.forEach(({ id, valId, val }) => {
-      const bar = document.getElementById(id);
-      if (bar) bar.style.height = `${Math.max(Math.round((val / chartMax) * 100), val > 0 ? 4 : 0)}%`;
-      const valEl = document.getElementById(valId);
-      if (valEl) valEl.textContent = Number.isInteger(val) ? val : val.toFixed(1);
-    });
-  });
+function renderStats(stats, settings) {
+  const set = (id, v) => { document.getElementById(id).textContent = v; };
+  const goal = settings.dailyGoal || 120;
+  const days = daysWithToday(stats);
+  const todayLive = stats.todayDate === CF.dayKey();
 
-  // Resistance rate → donut arc
-  const total = (stats.aiBlocksAvoided || 0) + (stats.problemsSolved || 0);
-  const rate = total > 0 ? Math.round((stats.aiBlocksAvoided / total) * 100) : 0;
-  const rateStr = `${rate}%`;
-  const DONUT_C = 289.03; // 2π × 46
-  const donutArc = document.getElementById('donutArc');
-  requestAnimationFrame(() => {
-    if (donutArc) donutArc.style.strokeDashoffset = String(DONUT_C * (1 - rate / 100));
+  const totalMin = stats.totalMinutes || 0;
+  set('tileHours', totalMin >= 60 ? `${(totalMin / 60).toFixed(1)}h` : `${totalMin}m`);
+  set('tileHoursSub', `across ${stats.totalSessions || 0} blocking session${stats.totalSessions === 1 ? '' : 's'}`);
+  const streak = liveStreak(stats);
+  set('tileStreak', `${streak}d`);
+  set('tileStreakSub', `best: ${stats.longestStreak || 0} day${stats.longestStreak === 1 ? '' : 's'}`);
+  set('tileBlocks', stats.aiBlocksAvoided || 0);
+  set('tileBlocksSub', `${todayLive ? stats.todayBlocks || 0 : 0} today`);
+  set('tileSolved', stats.problemsSolved || 0);
+  set('tileSolvedSub', `${todayLive ? stats.todaySolved || 0 : 0} today`);
+  set('tileSessions', stats.focusSessionsCompleted || 0);
+  const goalDays = Object.values(days).filter(e => e && e.m >= goal).length;
+  set('tileGoalDays', goalDays);
+  set('tileGoalSub', `hit your ${CF.fmtDuration(goal)} daily goal`);
+
+  // 30-day bars
+  const bars = document.getElementById('trendBars');
+  const axis = document.getElementById('trendAxis');
+  bars.textContent = ''; axis.textContent = '';
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const series = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = CF.addDays(today, -i);
+    const e = days[CF.dayKey(d)];
+    series.push({ d, m: (e && e.m) || 0, entry: e, today: i === 0 });
+  }
+  const max = Math.max(goal * 1.15, ...series.map(s => s.m));
+  let total = 0, active = 0;
+  series.forEach((s, idx) => {
+    total += s.m;
+    if (s.m) active++;
+    const bar = document.createElement('div');
+    bar.className = 'trend-bar' + (s.m >= goal ? ' hit' : '') + (s.today ? ' today' : '');
+    bar.title = describeDay(s.d, s.entry);
+    const fill = document.createElement('i');
+    fill.style.height = '0%';
+    bar.appendChild(fill);
+    bars.appendChild(bar);
+    requestAnimationFrame(() => { fill.style.height = s.m ? `${Math.max(3, (s.m / max) * 100)}%` : '0%'; });
+
+    const lbl = document.createElement('span');
+    if (idx % 7 === 1 || s.today) {
+      lbl.textContent = s.today ? 'Today' : s.d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    }
+    axis.appendChild(lbl);
   });
-  const rateFooterEl = document.getElementById('statResistRateFooter');
-  if (rateFooterEl) rateFooterEl.textContent = rateStr;
+  const goalLine = document.getElementById('trendGoal');
+  goalLine.style.bottom = `${(goal / max) * 100}%`;
+  set('trendGoalLbl', CF.fmtDuration(goal));
+  set('trendTotal', CF.fmtDuration(total));
+  set('trendSub', `focused in the last 30 days · ${active} active day${active === 1 ? '' : 's'} · ` +
+    `avg ${CF.fmtDuration(active ? total / active : 0)} per active day`);
 }
 
-// ─── Custom blocklist: add ────────────────────────────────────────────────────
+// ─── Data: export / import / reset ────────────────────────────────────────────
+
+function dataMsg(text, ok) {
+  const el = document.getElementById('dataMsg');
+  el.textContent = text;
+  el.className = 'unlock-msg ' + (ok ? 'ok' : 'err');
+}
+
+async function exportData() {
+  const [settings, stats] = await Promise.all([getSettings(), getStats()]);
+  const { pin, snoozeUntil, ...safeSettings } = settings;
+  const payload = {
+    app: 'cf-focus',
+    version: chrome.runtime.getManifest().version,
+    exportedAt: new Date().toISOString(),
+    settings: safeSettings,
+    stats,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `cf-focus-backup-${CF.dayKey()}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  dataMsg('Backup downloaded.', true);
+}
+
+async function importData(file) {
+  let data;
+  try {
+    data = JSON.parse(await file.text());
+  } catch (_) {
+    return dataMsg('That file isn’t valid JSON.', false);
+  }
+  if (!data || data.app !== 'cf-focus' || typeof data.settings !== 'object' || typeof data.stats !== 'object') {
+    return dataMsg('That doesn’t look like a CF Focus backup.', false);
+  }
+  if (!confirm('Replace your current settings and stats with this backup?')) return;
+
+  // Only accept keys we know, so a hand-edited file can't plant junk.
+  const settings = {};
+  for (const k of Object.keys(DEFAULTS)) {
+    if (k !== 'pin' && k !== 'snoozeUntil' && k in data.settings) settings[k] = data.settings[k];
+  }
+  const stats = {};
+  for (const k of Object.keys(STAT_DEFAULTS)) {
+    if (k in data.stats) stats[k] = data.stats[k];
+  }
+  await new Promise(r => chrome.storage.local.set(stats, r));
+  await saveSettings(settings);
+  if (settings.theme) window.CFTheme.set(settings.theme);
+  await loadAll();
+  dataMsg(`Restored backup from ${data.exportedAt ? new Date(data.exportedAt).toLocaleDateString() : 'file'}.`, true);
+  flashSaved('Backup restored');
+}
+
+async function resetStats() {
+  if (!confirm('Reset all focus stats? This clears your lock-in calendar too and cannot be undone.')) return;
+  const cleared = { ...STAT_DEFAULTS, dayLog: {}, todayDate: CF.dayKey(), sessionStart: null };
+  await new Promise(r => chrome.storage.local.set(cleared, r));
+  await refreshStats();
+  flashSaved('Stats reset');
+}
+
+// ─── Wiring ───────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
   checkPin();
+
+  document.getElementById('sidebarVersion').textContent = `v${chrome.runtime.getManifest().version}`;
+
+  // Show the shortcut the user actually has bound (it can be changed in Chrome).
+  if (chrome.commands && chrome.commands.getAll) {
+    chrome.commands.getAll(cmds => {
+      const c = (cmds || []).find(x => x.name === 'toggle-snooze');
+      const el = document.getElementById('shortcutText');
+      el.textContent = '';
+      if (c && c.shortcut) {
+        el.appendChild(document.createTextNode('Toggle snooze with '));
+        const k = document.createElement('span');
+        k.className = 'kbd';
+        k.textContent = c.shortcut;
+        el.appendChild(k);
+      } else {
+        el.textContent = 'No keyboard shortcut set for snooze';
+      }
+    });
+  }
+  document.getElementById('shortcutEdit').addEventListener('click', e => {
+    e.preventDefault();
+    chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
+  });
 
   // ─── Appearance switch ───────────────────────────────────────────────────
   const themeSeg = document.getElementById('themeSeg');
@@ -865,19 +1020,25 @@ document.addEventListener('DOMContentLoaded', () => {
   window.CFTheme.onChange(paintThemeSeg);
   paintThemeSeg();
 
-  // ─── Sidebar navigation ──────────────────────────────────────────────────
+  // ─── Sidebar navigation (deep-linkable: options.html#schedule) ───────────
   const navItems = document.querySelectorAll('.nav-item[data-view]');
   const views    = document.querySelectorAll('.view[id^="view-"]');
 
+  function goTo(view, push) {
+    const target = document.getElementById('view-' + view);
+    if (!target) return;
+    navItems.forEach(n => n.classList.toggle('active', n.dataset.view === view));
+    views.forEach(v => v.classList.toggle('active', v === target));
+    if (push) history.replaceState(null, '', `${location.search}#${view}`);
+    window.scrollTo(0, 0);
+  }
   navItems.forEach(item => {
-    item.onclick = () => {
-      navItems.forEach(n => n.classList.remove('active'));
-      views.forEach(v => v.classList.remove('active'));
-      item.classList.add('active');
-      const target = document.getElementById('view-' + item.dataset.view);
-      if (target) target.classList.add('active');
-    };
+    makeKeyboardClickable(item);
+    item.addEventListener('click', () => goTo(item.dataset.view, true));
   });
+  document.querySelectorAll('[data-goto]').forEach(a =>
+    a.addEventListener('click', e => { e.preventDefault(); goTo(a.dataset.goto, true); }));
+  if (location.hash) goTo(location.hash.slice(1), false);
 
   document.getElementById('customAddBtn').addEventListener('click', addCustomSite);
   document.getElementById('customInput').addEventListener('keydown', e => {
@@ -889,42 +1050,34 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Enter') addCustomPlatform();
   });
 
-  document.getElementById('resetStatsBtn').addEventListener('click', async () => {
-    if (!confirm('Reset all focus stats? This clears your lock-in calendar too and cannot be undone.')) return;
-    const cleared = {
-      totalSessions: 0, totalMinutes: 0, currentStreak: 0,
-      longestStreak: 0, lastSessionDate: null, sessionStart: null,
-      aiBlocksAvoided: 0, problemsSolved: 0,
-      // Wipe the day history as well, otherwise the calendar keeps showing
-      // activity the headline numbers say never happened.
-      dayLog: {}, todayMinutes: 0, todayBlocks: 0, todaySolved: 0, todaySessions: 0,
-    };
-    await new Promise(r => chrome.storage.local.set(cleared, r));
-    renderStats(cleared);
-    const settings = await getSettings();
-    renderCalendar({ dayLog: {}, todayDate: null, todayMinutes: 0, todayBlocks: 0, todaySolved: 0, todaySessions: 0 },
-      settings, cleared);
-    flashSaved();
+  document.getElementById('resetStatsBtn').addEventListener('click', resetStats);
+  document.getElementById('exportBtn').addEventListener('click', exportData);
+  const importFile = document.getElementById('importFile');
+  document.getElementById('importBtn').addEventListener('click', () => importFile.click());
+  importFile.addEventListener('change', () => {
+    if (importFile.files[0]) importData(importFile.files[0]);
+    importFile.value = '';
   });
 });
 
 async function addCustomSite() {
   const input = document.getElementById('customInput');
-  let domain = input.value.trim().toLowerCase()
-    .replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  const domain = CF.normalizeDomain(input.value);
   if (!domain) return;
 
-  // Basic domain validation — must look like a real hostname
-  const domainRe = /^([a-z0-9-]+\.)+[a-z]{2,}(:[0-9]+)?$/;
-  if (!domainRe.test(domain)) {
-    input.style.borderColor = 'var(--red)';
-    setTimeout(() => { input.style.borderColor = ''; }, 1500);
-    return;
-  }
+  // Must look like a real hostname
+  if (!CF.DOMAIN_RE.test(domain)) return flashInvalid(input);
 
   const s = await getSettings();
   if (s.customBlocklist.includes(domain)) {
     input.value = '';
+    flashSaved('Already blocked');
+    return;
+  }
+  // Blocking a practice site would block the page you're trying to work on.
+  if (CF.isFocusUrl(`https://${domain}/`, s)) {
+    flashInvalid(input);
+    flashSaved('That’s one of your practice platforms');
     return;
   }
 
@@ -935,8 +1088,8 @@ async function addCustomSite() {
   if (!alreadyGranted) {
     const granted = await requestHostPermissionFor(domain);
     if (!granted) {
-      input.style.borderColor = 'var(--red)';
-      setTimeout(() => { input.style.borderColor = ''; }, 1500);
+      flashInvalid(input);
+      flashSaved('Permission needed to block that site');
       return;
     }
   }
@@ -945,5 +1098,5 @@ async function addCustomSite() {
   await saveSettings({ customBlocklist: updated });
   input.value = '';
   renderCustomList(updated);
-  flashSaved();
+  flashSaved('Site blocked');
 }

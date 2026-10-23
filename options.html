@@ -28,6 +28,7 @@
       --mono:  'JetBrains Mono', monospace;
       --sans:  'Inter', sans-serif;
       --sidebar-w: 220px;
+      --ok: #3ecf8e;
 
       /* White-overlay fills/borders (dark = original literal) */
       --w03: rgba(255,255,255,0.03);
@@ -237,66 +238,81 @@
       color: var(--muted); margin-bottom: 16px;
     }
 
-    /* ── Visualization panel (vertical bars + donut) ─────────────── */
-    .viz-panel {
-      background: var(--s1);
-      border: 1px solid var(--b1);
-      border-radius: 14px;
-      padding: 24px 28px 28px;
-      display: flex; align-items: center; gap: 36px;
+    /* ── All-time tiles ──────────────────────────────────────────── */
+    .tile-grid {
+      display: grid; grid-template-columns: repeat(6, 1fr);
+      gap: 14px;
     }
-    .vbar-area { flex: 1; min-width: 0; }
-    .vbar-eyebrow {
+    @media (max-width: 1280px) { .tile-grid { grid-template-columns: repeat(3, 1fr); } }
+    .tile {
+      background: var(--s1); border: 1px solid var(--b1); border-radius: 14px;
+      padding: 18px 20px; position: relative; overflow: hidden;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .tile:hover { border-color: var(--b2); transform: translateY(-2px); }
+    .tile.accent {
+      background:
+        radial-gradient(120% 120% at 100% 0%, rgba(229,56,59,0.22), transparent 60%),
+        var(--s1);
+      border-color: var(--red-m);
+    }
+    .tile-lbl {
       font-family: var(--mono); font-size: 9px; font-weight: 600;
-      letter-spacing: 1.4px; text-transform: uppercase;
-      color: var(--muted); margin-bottom: 12px;
+      letter-spacing: 1.3px; text-transform: uppercase; color: var(--muted);
     }
-    .vbar-chart {
-      position: relative; height: 176px;
+    .tile-val {
+      font-family: var(--mono); font-size: 30px; font-weight: 700;
+      letter-spacing: -1.4px; color: var(--text); margin-top: 10px; line-height: 1;
+      font-variant-numeric: tabular-nums;
     }
-    .vbar-grid {
-      position: absolute; left: 0; right: 0; top: 18px; bottom: 24px;
-      display: flex; flex-direction: column;
-      justify-content: space-between; pointer-events: none;
-    }
-    .vbar-grid-line { height: 1px; background: var(--w04); }
-    .vbar-cols {
-      position: absolute; inset: 0;
-      display: flex; align-items: flex-end; gap: 14px;
-    }
-    .vbar-col {
-      flex: 1; height: 100%;
-      display: flex; flex-direction: column; align-items: center; gap: 5px;
-    }
-    .vbar-val {
-      font-family: var(--mono); font-size: 12px; font-weight: 700;
-      color: var(--text); flex-shrink: 0; min-height: 18px;
-    }
-    .vbar-track {
-      flex: 1; width: 100%; max-width: 128px; background: var(--b2);
-      border-radius: 6px 6px 2px 2px;
-      display: flex; align-items: flex-end; overflow: hidden;
-    }
-    .vbar-fill {
-      width: 100%; height: 0%; border-radius: 5px 5px 2px 2px;
-      transition: height 0.9s cubic-bezier(0.34, 1.3, 0.64, 1);
-    }
-    .f-neutral { background: linear-gradient(to top, var(--w40), var(--w07)); }
-    .f-red     { background: linear-gradient(to top, #c8191c, rgba(200,25,28,0.2)); }
-    .f-white   { background: linear-gradient(to top, var(--w65), var(--w12)); }
-    .vbar-lbl {
-      font-family: var(--mono); font-size: 9px; color: var(--muted);
-      text-align: center; flex-shrink: 0; letter-spacing: 0.4px; text-transform: uppercase;
-    }
+    .tile-val.red { color: var(--red); }
+    .tile-val.ok  { color: var(--ok); }
+    .tile-sub { font-size: 11px; color: var(--text2); margin-top: 8px; }
 
-    /* Donut chart */
-    .donut-wrap { flex-shrink: 0; text-align: center; }
-    .donut-svg  { width: 130px; height: 130px; display: block; margin: 0 auto; overflow: visible; }
-    #donutArc   { transition: stroke-dashoffset 1s cubic-bezier(0.34, 1.1, 0.64, 1); }
-    .donut-sub  {
-      font-family: var(--mono); font-size: 9px; color: var(--muted);
-      margin-top: 8px; letter-spacing: 0.3px;
+    /* ── 30-day trend ────────────────────────────────────────────── */
+    .trend-panel {
+      background: var(--s1); border: 1px solid var(--b1);
+      border-radius: 14px; padding: 22px 28px 18px;
     }
+    .trend-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; gap: 16px; }
+    .trend-big { font-family: var(--mono); font-size: 24px; font-weight: 700; letter-spacing: -1px; }
+    .trend-sub { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 4px; }
+    .trend-legend {
+      display: flex; align-items: center; gap: 7px;
+      font-family: var(--mono); font-size: 9px; color: var(--muted);
+    }
+    .trend-goal-swatch { width: 16px; border-top: 1.5px dashed var(--text2); }
+    .trend-chart { position: relative; height: 150px; }
+    .trend-bars {
+      position: absolute; inset: 0 34px 0 0;
+      display: grid; grid-template-columns: repeat(30, 1fr); gap: 5px; align-items: end;
+    }
+    .trend-bar {
+      height: 100%; display: flex; align-items: flex-end; border-radius: 4px;
+      background: var(--w04); cursor: default;
+    }
+    .trend-bar i {
+      display: block; width: 100%; border-radius: 4px 4px 2px 2px;
+      background: linear-gradient(to top, rgba(200,25,28,0.55), #e8262a);
+      transition: height 0.8s cubic-bezier(0.34, 1.2, 0.64, 1);
+    }
+    .trend-bar.hit i { background: linear-gradient(to top, #c8191c, #ff5a3c); box-shadow: 0 0 12px rgba(229,56,59,0.35); }
+    .trend-bar.today { outline: 1.5px solid var(--text); outline-offset: 2px; }
+    .trend-bar:hover i { filter: brightness(1.2); }
+    .trend-goal {
+      position: absolute; left: 0; right: 0; height: 0;
+      border-top: 1.5px dashed var(--w35); z-index: 1; pointer-events: none;
+    }
+    .trend-goal span {
+      position: absolute; right: 0; top: -8px;
+      font-family: var(--mono); font-size: 9px; color: var(--text2);
+      background: var(--s1); padding: 0 4px;
+    }
+    .trend-axis {
+      display: grid; grid-template-columns: repeat(30, 1fr); gap: 5px; margin: 8px 34px 0 0;
+      font-family: var(--mono); font-size: 9px; color: var(--muted);
+    }
+    .trend-axis span { white-space: nowrap; overflow: visible; }
 
     /* ── Lock-in calendar (GitHub-style contribution grid) ───────── */
     .cal-panel {
@@ -949,6 +965,40 @@
     .theme-seg button:hover { background: var(--w07); color: var(--text); }
     .theme-seg button.on { background: var(--solid); color: var(--on-solid); }
 
+    /* ── Polish ──────────────────────────────────────────────────── */
+    .view.active { animation: fade-in 0.25s ease; }
+    @keyframes fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) { .view.active, #welcome { animation: none; } }
+    .nav-item { position: relative; }
+    .nav-item.active::before {
+      content: ''; position: absolute; left: -10px; top: 8px; bottom: 8px; width: 3px;
+      border-radius: 0 3px 3px 0; background: var(--red);
+    }
+    .sidebar-logo-badge {
+      background: linear-gradient(135deg, #ff5a3c, #c8191c 60%, #8d1013);
+      color: #fff; box-shadow: 0 6px 18px rgba(200,25,28,0.35);
+    }
+    .card { transition: border-color 0.2s; }
+    .card:hover { border-color: var(--b2); }
+    button:focus-visible, .nav-item:focus-visible, .snooze-chip:focus-visible,
+    .ai-chip:focus-visible, .day-chip:focus-visible, .platform-card:focus-visible {
+      outline: 2px solid var(--red); outline-offset: 2px;
+    }
+    .link-btn {
+      margin-left: auto; color: var(--text2); font-family: var(--mono); font-size: 10px;
+      text-decoration: none; border-bottom: 1px dashed var(--b2);
+    }
+    .link-btn:hover { color: var(--red); border-color: var(--red); }
+    .stats-resist-note a { color: var(--text2); }
+    .stats-resist-note a:hover { color: var(--red); }
+    .sched-timeline-now {
+      position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px;
+      background: var(--text); border-radius: 2px; z-index: 1;
+    }
+    .sched-timeline-bar { overflow: visible; }
+    .pin-error.locked { color: var(--text2); }
+    .ai-chip.custom { border-style: dashed; }
+
     /* ── Light theme ─────────────────────────────────────────────── */
     :root[data-theme="light"] {
         /* Base palette */
@@ -963,6 +1013,7 @@
         --dim:   rgba(0,0,0,0.05);
         --red-d: rgba(200,25,28,0.07);
         --red-m: rgba(200,25,28,0.30);
+        --ok: #13955b;
         /* --red and --sidebar-w unchanged */
 
         /* White-overlay fills/borders → black tints */
@@ -998,10 +1049,32 @@
         --cal-empty-line: rgba(0,0,0,0.05);
     }
 
-    /* Donut chart uses inline SVG fills (near-white %text, near-black track)
-       that only read on the dark theme — override them for light. */
-    :root[data-theme="light"] .donut-svg circle:first-of-type { stroke: #e4e4e8; }
-    :root[data-theme="light"] #statResistRateFooter { fill: #18181b; }
+    /* ── Welcome (first run) ─────────────────────────────────────── */
+    #welcome {
+      position: fixed; inset: 0; z-index: 210;
+      background: var(--modal-bg);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      display: flex; align-items: center; justify-content: center;
+      animation: fade-in 0.3s ease;
+    }
+    #welcome.hidden { display: none; }
+    .welcome-box {
+      background: var(--s1); border: 1px solid var(--b2); border-radius: 22px;
+      padding: 40px 40px 34px; width: 440px; max-width: calc(100vw - 32px);
+      box-shadow: 0 40px 80px var(--sh8);
+    }
+    .welcome-logo {
+      width: 48px; height: 48px; border-radius: 14px; margin-bottom: 20px;
+      background: linear-gradient(135deg, #ff5a3c, #c8191c 60%, #8d1013);
+      box-shadow: 0 10px 30px rgba(200,25,28,0.4);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-weight: 700; font-size: 16px; color: #fff;
+    }
+    .welcome-box h2 { font-size: 22px; letter-spacing: -0.6px; margin-bottom: 8px; }
+    .welcome-box p { color: var(--text2); line-height: 1.55; margin-bottom: 16px; }
+    .welcome-box ol { padding-left: 20px; margin-bottom: 26px; display: flex; flex-direction: column; gap: 10px; }
+    .welcome-box li { color: var(--text2); line-height: 1.5; }
+    .welcome-box li b { color: var(--text); }
   </style>
 </head>
 <body>
@@ -1019,7 +1092,7 @@
       </div>
       <h2>Settings locked</h2>
       <p class="pin-box-desc">Enter your PIN to access settings</p>
-      <input type="password" class="pin-input" id="pinModalInput" maxlength="8"
+      <input type="password" class="pin-input" id="pinModalInput" maxlength="8" autocomplete="off"
         placeholder="&middot;  &middot;  &middot;  &middot;" inputmode="numeric">
       <div class="pin-error" id="pinModalError"></div>
       <button class="btn-primary" id="pinModalSubmit">Unlock</button>
@@ -1095,6 +1168,15 @@
         </svg>
         Security
       </div>
+
+      <div class="nav-item" data-view="data">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none">
+          <ellipse cx="8" cy="3.5" rx="5.5" ry="2" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M2.5 3.5v9c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2v-9M2.5 8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2"
+            stroke="currentColor" stroke-width="1.3"/>
+        </svg>
+        Data
+      </div>
     </nav>
 
     <div class="sidebar-footer">
@@ -1104,7 +1186,7 @@
         <button data-theme-pref="dark"   title="Dark">Dark</button>
         <button data-theme-pref="system" title="Follow system">Auto</button>
       </div>
-      <div class="sidebar-version">v1.0.0</div>
+      <div class="sidebar-version" id="sidebarVersion">v1.0.0</div>
     </div>
   </aside>
 
@@ -1152,68 +1234,60 @@
             </div>
           </div>
 
-          <div class="stats-band-label section-gap">Your Performance</div>
-          <div class="viz-panel">
-            <div class="vbar-area">
-              <div class="vbar-eyebrow">Performance Overview</div>
-              <div class="vbar-chart">
-                <div class="vbar-grid">
-                  <div class="vbar-grid-line"></div>
-                  <div class="vbar-grid-line"></div>
-                  <div class="vbar-grid-line"></div>
-                </div>
-                <div class="vbar-cols">
-                  <div class="vbar-col">
-                    <div class="vbar-val" id="chartSessionsVal">0</div>
-                    <div class="vbar-track"><div class="vbar-fill f-neutral" id="chartSessions"></div></div>
-                    <div class="vbar-lbl">Sessions</div>
-                  </div>
-                  <div class="vbar-col">
-                    <div class="vbar-val" id="chartHoursVal">0</div>
-                    <div class="vbar-track"><div class="vbar-fill f-neutral" id="chartHours"></div></div>
-                    <div class="vbar-lbl">Hours</div>
-                  </div>
-                  <div class="vbar-col">
-                    <div class="vbar-val" id="chartBlocksVal">0</div>
-                    <div class="vbar-track"><div class="vbar-fill f-red" id="chartBlocks"></div></div>
-                    <div class="vbar-lbl">Blocked</div>
-                  </div>
-                  <div class="vbar-col">
-                    <div class="vbar-val" id="chartSolvedVal">0</div>
-                    <div class="vbar-track"><div class="vbar-fill f-white" id="chartSolved"></div></div>
-                    <div class="vbar-lbl">Solved</div>
-                  </div>
-                </div>
-              </div>
+          <div class="stats-band-label section-gap">All Time</div>
+          <div class="tile-grid">
+            <div class="tile accent">
+              <div class="tile-lbl">Focus time</div>
+              <div class="tile-val" id="tileHours">0h</div>
+              <div class="tile-sub" id="tileHoursSub">across 0 sessions</div>
             </div>
+            <div class="tile">
+              <div class="tile-lbl">Current streak</div>
+              <div class="tile-val" id="tileStreak">0</div>
+              <div class="tile-sub" id="tileStreakSub">best: 0 days</div>
+            </div>
+            <div class="tile">
+              <div class="tile-lbl">AI visits resisted</div>
+              <div class="tile-val red" id="tileBlocks">0</div>
+              <div class="tile-sub" id="tileBlocksSub">0 today</div>
+            </div>
+            <div class="tile">
+              <div class="tile-lbl">Problems solved</div>
+              <div class="tile-val ok" id="tileSolved">0</div>
+              <div class="tile-sub" id="tileSolvedSub">0 today</div>
+            </div>
+            <div class="tile">
+              <div class="tile-lbl">Sessions completed</div>
+              <div class="tile-val" id="tileSessions">0</div>
+              <div class="tile-sub">timed focus sessions</div>
+            </div>
+            <div class="tile">
+              <div class="tile-lbl">Goal days</div>
+              <div class="tile-val" id="tileGoalDays">0</div>
+              <div class="tile-sub" id="tileGoalSub">hit your daily goal</div>
+            </div>
+          </div>
 
-            <!-- Donut ring: resistance rate -->
-            <div class="donut-wrap">
-              <svg class="donut-svg" viewBox="0 0 120 120">
-                <circle cx="60" cy="60" r="46" fill="none" stroke="#141414" stroke-width="12"/>
-                <circle id="donutArc"
-                  cx="60" cy="60" r="46"
-                  fill="none" stroke="#c8191c" stroke-width="12"
-                  stroke-dasharray="289.03" stroke-dashoffset="289.03"
-                  stroke-linecap="round" transform="rotate(-90 60 60)"/>
-                <text id="statResistRateFooter" x="60" y="55"
-                  text-anchor="middle"
-                  font-family="'JetBrains Mono', monospace"
-                  font-size="22" font-weight="700" fill="#f0f0f0">0%</text>
-                <text x="60" y="70"
-                  text-anchor="middle"
-                  font-family="'Inter', sans-serif"
-                  font-size="8.5" fill="#3a3a3a" letter-spacing="1.2">RESISTANCE</text>
-              </svg>
-              <div class="donut-sub">AI blocked vs self-solved</div>
+          <div class="stats-band-label section-gap">Last 30 Days</div>
+          <div class="trend-panel">
+            <div class="trend-head">
+              <div>
+                <div class="trend-big" id="trendTotal">0h</div>
+                <div class="trend-sub" id="trendSub">focused in the last 30 days</div>
+              </div>
+              <div class="trend-legend"><span class="trend-goal-swatch"></span>daily goal</div>
             </div>
+            <div class="trend-chart">
+              <div class="trend-goal" id="trendGoal"><span id="trendGoalLbl">2h</span></div>
+              <div class="trend-bars" id="trendBars"></div>
+            </div>
+            <div class="trend-axis" id="trendAxis"></div>
           </div>
 
           <div class="stats-footer">
             <span class="stats-resist-note">
-              Stats update as you use the extension &mdash; keep going!
+              Stats live on this device. Back them up from <a href="#data" data-goto="data">Data</a>.
             </span>
-            <button class="btn-ghost" id="resetStatsBtn">Reset all stats</button>
           </div>
         </div>
       </div>
@@ -1221,7 +1295,7 @@
 
     <!-- ── VIEW: Platforms ── -->
     <div class="view" id="view-platforms">
-      <div class="view-header">
+      <div class="view-header narrow">
         <div class="view-title">Platforms</div>
         <div class="view-sub">Select which coding platforms activate AI blocking</div>
       </div>
@@ -1262,7 +1336,8 @@
                   <rect x="1.5" y="4.5" width="13" height="9" rx="2" stroke="currentColor" stroke-width="1.2"/>
                   <path d="M5 1.5v3M8 1.5v3M11 1.5v3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
                 </svg>
-                <span>Toggle with <span class="kbd">Ctrl+Shift+B</span> &nbsp;&middot;&nbsp; Mac: <span class="kbd">&#x2318;&#x21E7;B</span></span>
+                <span id="shortcutText">Toggle with <span class="kbd">Ctrl+Shift+B</span> &nbsp;&middot;&nbsp; Mac: <span class="kbd">&#x2318;&#x21E7;B</span></span>
+                <a href="#" id="shortcutEdit" class="link-btn">Change</a>
               </div>
             </div>
           </div>
@@ -1341,7 +1416,7 @@
 
     <!-- ── VIEW: Blocked Sites ── -->
     <div class="view" id="view-sites">
-      <div class="view-header">
+      <div class="view-header narrow">
         <div class="view-title">Blocked Sites</div>
         <div class="view-sub">Manage which AI tools are blocked during focus sessions</div>
       </div>
@@ -1379,7 +1454,7 @@
 
     <!-- ── VIEW: Schedule ── -->
     <div class="view" id="view-schedule">
-      <div class="view-header">
+      <div class="view-header narrow">
         <div class="view-title">Schedule</div>
         <div class="view-sub">Automatically block AI on selected days and hours</div>
       </div>
@@ -1426,6 +1501,8 @@
                   <div class="sched-timeline-wrap">
                     <div class="sched-timeline-bar">
                       <div class="sched-timeline-fill" id="schedTimelineFill"></div>
+                      <div class="sched-timeline-fill" id="schedTimelineFill2"></div>
+                      <div class="sched-timeline-now" id="schedNow" title="Now"></div>
                     </div>
                     <div class="sched-timeline-ticks">
                       <span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>24h</span>
@@ -1450,7 +1527,7 @@
 
     <!-- ── VIEW: AI Unlock ── -->
     <div class="view" id="view-unlock">
-      <div class="view-header">
+      <div class="view-header narrow">
         <div class="view-title">AI Unlock</div>
         <div class="view-sub">Earn AI access by putting the time in first</div>
       </div>
@@ -1506,7 +1583,7 @@
 
     <!-- ── VIEW: Security ── -->
     <div class="view" id="view-security">
-      <div class="view-header">
+      <div class="view-header narrow">
         <div class="view-title">Security</div>
         <div class="view-sub">Protect your settings with a PIN lock</div>
       </div>
@@ -1561,7 +1638,60 @@
       </div>
     </div>
 
+    <!-- ── VIEW: Data ── -->
+    <div class="view" id="view-data">
+      <div class="view-header narrow">
+        <div class="view-title">Data</div>
+        <div class="view-sub">Back up, restore or reset your settings and stats</div>
+      </div>
+      <div class="wrap">
+        <div class="settings-wrap">
+          <div class="card">
+            <div class="row-setting">
+              <div class="row-left">
+                <div class="row-label">Export backup</div>
+                <div class="row-sub">Download your settings, stats and lock-in calendar as a JSON file. Your PIN is not included.</div>
+              </div>
+              <button class="btn-add" id="exportBtn">Export</button>
+            </div>
+            <div class="row-setting">
+              <div class="row-left">
+                <div class="row-label">Import backup</div>
+                <div class="row-sub">Restore from a CF Focus backup file. This replaces your current settings and stats.</div>
+              </div>
+              <button class="btn-add" id="importBtn">Import&hellip;</button>
+              <input type="file" id="importFile" accept="application/json,.json" hidden>
+            </div>
+            <div class="unlock-msg" id="dataMsg"></div>
+          </div>
+
+          <div class="pin-remove-section">
+            <div>
+              <div class="pin-remove-title">Reset all stats</div>
+              <div class="pin-remove-sub">Clears focus time, streaks, counters and the lock-in calendar. Settings are kept. This cannot be undone.</div>
+            </div>
+            <button class="btn-remove-pin" id="resetStatsBtn">Reset stats</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /main-area -->
+
+  <!-- First-run welcome -->
+  <div id="welcome" class="hidden">
+    <div class="welcome-box">
+      <div class="welcome-logo">CF</div>
+      <h2>Welcome to CF Focus</h2>
+      <p>AI chatbots are now blocked whenever a practice site is open. Here&rsquo;s the deal:</p>
+      <ol>
+        <li><b>Open Codeforces, LeetCode&hellip;</b> &mdash; blocking switches on automatically.</li>
+        <li><b>Put the time in.</b> After <span id="welcomeUnlock">35</span> minutes on a problem you can earn a short AI unlock.</li>
+        <li><b>Track it.</b> Your streak, solves and a year-long calendar live right here.</li>
+      </ol>
+      <button class="btn-primary" id="welcomeDone">Let&rsquo;s go</button>
+    </div>
+  </div>
 
   <!-- Save toast -->
   <div id="saveIndicator">
@@ -1574,6 +1704,7 @@
     Saved
   </div>
 
+  <script src="common.js"></script>
   <script src="options.js"></script>
 </body>
 </html>

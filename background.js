@@ -61,8 +61,12 @@ function enqueue(fn) {
 // n=stat sessions. Kept for ~400 days so the year grid always has a full window.
 const DAY_LOG_KEEP_DAYS = 400;
 
+function dayLogCutoff() {
+  return CF.dayKey(CF.addDays(new Date(), -DAY_LOG_KEEP_DAYS));
+}
+
 function pruneDayLog(dayLog) {
-  const cutoff = CF.dayKey(CF.addDays(new Date(), -DAY_LOG_KEEP_DAYS));
+  const cutoff = dayLogCutoff();
   const out = {};
   for (const [date, entry] of Object.entries(dayLog || {})) {
     if (date >= cutoff) out[date] = entry;
@@ -75,7 +79,7 @@ function pruneDayLog(dayLog) {
 // that keeps this a single write per day and makes double-counting impossible.
 function archiveDay(dayLog, date, entry) {
   const log = pruneDayLog(dayLog);
-  if (!date) return log;
+  if (!date || date < dayLogCutoff()) return log;
   const m = entry.m || 0, b = entry.b || 0, s = entry.s || 0, n = entry.n || 0;
   if (m || b || s || n) log[date] = { m, b, s, n };
   return log;
@@ -484,11 +488,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           const duration = clampInt(msg.duration, 5, 240, 50);
           const hardcore = !!msg.hardcore;
           const endTime = Date.now() + duration * 60000;
-          await enqueue(async () => {
-            const l = await getLocalState();
-            if (activeSession(l) && activeSession(l).hardcore) throw new Error('hardcore');
-            await chrome.storage.local.set({ focusSession: { endTime, hardcore, duration, startedAt: Date.now() } });
-          });
+          const current = activeSession(await getLocalState());
+          if (current && current.hardcore) {
+            sendResponse({ ok: false, reason: 'hardcore' });
+            return;
+          }
+          await chrome.storage.local.set({ focusSession: { endTime, hardcore, duration, startedAt: Date.now() } });
           // Starting a session means you want blocking now — cancel any snooze.
           await chrome.storage.sync.set({ snoozeUntil: 0, sessionLength: duration });
           await chrome.alarms.clear('snooze-end');
@@ -673,10 +678,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       }
       sendResponse({ ok: true });
     } catch (err) {
-      if (err && err.message === 'hardcore') {
-        sendResponse({ ok: false, reason: 'hardcore' });
-        return;
-      }
       console.error('CF Focus: message handler error', err);
       sendResponse({ ok: false, error: err.message });
     }
