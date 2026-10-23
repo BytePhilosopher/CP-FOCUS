@@ -306,6 +306,63 @@
     }
     .success-msg-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
     .success-msg-sub { font-size: 11px; color: var(--red); font-family: var(--mono); }
+    /* ── Today strip: what resisting has added up to ── */
+    .today-strip {
+      display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+    .today-chip {
+      display: inline-flex; align-items: baseline; gap: 6px;
+      background: rgba(0,0,0,0.22); border: 1px solid rgba(255,255,255,0.24);
+      border-radius: 999px; padding: 5px 13px;
+      font-family: var(--mono); font-size: 10px; font-weight: 600;
+      color: rgba(255,255,255,0.88);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    }
+    .today-chip b { font-size: 13px; font-weight: 800; color: var(--white); }
+
+    /* ── Tip card: one concrete thing to try instead of asking ── */
+    .tip-card {
+      width: 100%; margin-bottom: 18px;
+      background: rgba(0,0,0,0.20); border: 1px solid rgba(255,255,255,0.22);
+      border-radius: 18px; padding: 14px 16px 14px 18px;
+      display: flex; gap: 14px; align-items: flex-start;
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    }
+    .tip-icon {
+      width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
+      background: var(--white); color: var(--red);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .tip-body { flex: 1; min-width: 0; }
+    .tip-label {
+      font-family: var(--mono); font-size: 9px; font-weight: 700;
+      letter-spacing: 1.4px; text-transform: uppercase;
+      color: rgba(255,255,255,0.72); margin-bottom: 4px;
+    }
+    .tip-text {
+      font-size: 13px; line-height: 1.5; color: var(--white); font-weight: 500;
+      transition: opacity 0.25s ease;
+    }
+    .tip-next {
+      flex-shrink: 0; align-self: center;
+      width: 30px; height: 30px; border-radius: 50%;
+      background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.28);
+      color: var(--white); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, transform 0.25s;
+    }
+    .tip-next:hover { background: rgba(255,255,255,0.26); transform: rotate(90deg); }
+    .tip-next:focus-visible { outline: 2px solid var(--white); outline-offset: 2px; }
+    .kbd-hint {
+      font-family: var(--mono); font-size: 9.5px; color: rgba(255,255,255,0.7);
+      text-align: center; letter-spacing: 0.3px;
+    }
+    .kbd-hint kbd {
+      font-family: inherit; font-weight: 700; color: var(--white);
+      border: 1px solid rgba(255,255,255,0.35); border-radius: 4px; padding: 0 5px;
+    }
+
     /* ── Narrow screens: the ribbon stacks but stays connected ── */
     @media (max-width: 440px) {
       :root { --clock: 216px; }
@@ -365,6 +422,30 @@
     <p class="subtitle" id="subText">This page is gone until you&rsquo;ve done the thinking.</p>
     <div id="siteBadgeWrap"><span id="siteBadge"></span></div>
 
+    <div class="today-strip">
+      <span class="today-chip"><b id="chipResisted">0</b> resisted today</span>
+      <span class="today-chip"><b id="chipSolved">0</b> solved today</span>
+      <span class="today-chip"><b id="chipStreak">0</b> day streak</span>
+    </div>
+
+    <div class="tip-card">
+      <div class="tip-icon" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2V16h5.2v-.2c0-.8.4-1.5 1-2A6 6 0 0 0 12 3Z"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="tip-body">
+        <div class="tip-label">Try this instead</div>
+        <div class="tip-text" id="tipText">Solve three tiny cases by hand and look for the pattern.</div>
+      </div>
+      <button class="tip-next" id="tipNext" title="Another tip (T)" aria-label="Another tip">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+          <path d="M13.5 8A5.5 5.5 0 1 1 11.9 4M13.5 2v3.5H10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+
     <!-- Connected action ribbon -->
     <div class="ribbon" id="actions">
       <button class="ribbon-btn" id="goBackBtn">
@@ -389,10 +470,13 @@
       <div class="success-msg-sub" id="successSub">Redirecting&hellip;</div>
     </div>
 
+    <div class="kbd-hint"><kbd>B</kbd> back to problem &nbsp;·&nbsp; <kbd>S</kbd> solved &nbsp;·&nbsp; <kbd>T</kbd> next tip</div>
+
     </div><!-- /col-main -->
 
   </div>
 
+  <script src="common.js"></script>
   <script src="blocked.js"></script>
 </body>
 </html>
